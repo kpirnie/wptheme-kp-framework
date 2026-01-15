@@ -1,0 +1,32 @@
+{
+    "name": "kevinpirnie/theme-framework",
+    "description": "",
+    "type": "wordpress-theme",
+    "version": "0.0.1",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Kevin Pirnie",
+            "email": "me@kpirnie.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "kevinpirnie/kpt-wpfieldframework": "dev-develop"
+    },
+    "autoload": {
+        "classmap": [
+            "work/inc"
+        ],
+        "files": [
+            "work/kpf-main.php"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "classmap-authoritative": true,
+        "apcu-autoloader": true,
+        "sort-packages": true
+    }
+}
