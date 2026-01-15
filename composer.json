@@ -1,13 +1,13 @@
 {
     "name": "kevinpirnie/theme-framework",
-    "description": "",
+    "description": "A modern WordPress parent theme framework with CSS framework selection",
     "type": "wordpress-theme",
-    "version": "0.0.1",
+    "version": "1.0.1",
     "license": "MIT",
     "authors": [
         {
             "name": "Kevin Pirnie",
-            "email": "me@kpirnie.com",
+            "email": "iam@kevinpirnie.com",
             "role": "Developer"
         }
     ],

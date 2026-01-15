@@ -1,11 +1,18 @@
 {
     "name": "kp-theme-framework",
-    "version": "1.0.0",
+    "version": "1.0.1",
+    "description": "KP Theme Framework - WordPress parent theme with CSS framework selection",
     "scripts": {
-        "build": "wp-scripts build",
-        "start": "wp-scripts start"
+        "build": "npm run build:blocks && npm run build:tailwind",
+        "build:blocks": "wp-scripts build",
+        "build:tailwind": "npx tailwindcss -i ./src/css/tailwind-input.css -o ./assets/css/tailwind.css --minify",
+        "start": "npm run start:blocks & npm run watch:tailwind",
+        "start:blocks": "wp-scripts start",
+        "watch:tailwind": "npx tailwindcss -i ./src/css/tailwind-input.css -o ./assets/css/tailwind.css --watch"
     },
     "devDependencies": {
-        "@wordpress/scripts": "^31.1.0"
+        "@tailwindcss/typography": "^0.5.15",
+        "@wordpress/scripts": "^31.1.0",
+        "tailwindcss": "^3.4.17"
     }
 }

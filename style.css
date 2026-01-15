@@ -1,0 +1,111 @@
+/*
+Theme Name: KP Theme Framework
+Theme URI: https://kevinpirnie.com
+Author: Kevin Pirnie
+Author URI: https://kevinpirnie.com
+Description: A modern WordPress parent theme framework with CSS framework selection. Supports Bootstrap, UIKit, Tailwind CSS, Foundation, and Bulma.
+Version: 1.0.1
+Requires at least: 6.4
+Tested up to: 7.0
+Requires PHP: 8.2
+License: MIT
+License URI: https://opensource.org/licenses/MIT
+Text Domain: kpf
+Tags: custom-background, custom-logo, custom-menu, featured-images, threaded-comments, translation-ready, wide-blocks
+
+KP Theme Framework is a flexible parent theme that allows you to choose your preferred CSS framework.
+*/
+
+/* Base styles - these apply regardless of framework selection */
+:root {
+    --kpf-font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    --kpf-font-size-base: 1rem;
+    --kpf-line-height-base: 1.5;
+    --kpf-color-text: #1f2937;
+    --kpf-color-background: #ffffff;
+    --kpf-color-primary: #3b82f6;
+    --kpf-color-secondary: #6b7280;
+}
+
+/* Only apply base styles when no framework is selected */
+.kpf-no-framework {
+    font-family: var(--kpf-font-family);
+    font-size: var(--kpf-font-size-base);
+    line-height: var(--kpf-line-height-base);
+    color: var(--kpf-color-text);
+    background-color: var(--kpf-color-background);
+}
+
+.kpf-no-framework *,
+.kpf-no-framework *::before,
+.kpf-no-framework *::after {
+    box-sizing: border-box;
+}
+
+.kpf-no-framework img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* WordPress core styles */
+.alignleft {
+    float: left;
+    margin-right: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.alignright {
+    float: right;
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.aligncenter {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.alignwide {
+    max-width: 100%;
+}
+
+.alignfull {
+    max-width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+}
+
+/* Screen reader text */
+.screen-reader-text {
+    border: 0;
+    clip: rect(1px, 1px, 1px, 1px);
+    clip-path: inset(50%);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+    word-wrap: normal !important;
+}
+
+.screen-reader-text:focus {
+    background-color: #f1f1f1;
+    border-radius: 3px;
+    box-shadow: 0 0 2px 2px rgba(0, 0, 0, 0.6);
+    clip: auto !important;
+    clip-path: none;
+    color: #21759b;
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 700;
+    height: auto;
+    left: 5px;
+    line-height: normal;
+    padding: 15px 23px 14px;
+    text-decoration: none;
+    top: 5px;
+    width: auto;
+    z-index: 100000;
+}

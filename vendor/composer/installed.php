@@ -1,8 +1,8 @@
 <?php return array(
     'root' => array(
         'name' => 'kevinpirnie/theme-framework',
-        'pretty_version' => '0.0.1',
-        'version' => '0.0.1.0',
+        'pretty_version' => '1.0.1',
+        'version' => '1.0.1.0',
         'reference' => null,
         'type' => 'wordpress-theme',
         'install_path' => __DIR__ . '/../../',
@@ -20,8 +20,8 @@
             'dev_requirement' => false,
         ),
         'kevinpirnie/theme-framework' => array(
-            'pretty_version' => '0.0.1',
-            'version' => '0.0.1.0',
+            'pretty_version' => '1.0.1',
+            'version' => '1.0.1.0',
             'reference' => null,
             'type' => 'wordpress-theme',
             'install_path' => __DIR__ . '/../../',

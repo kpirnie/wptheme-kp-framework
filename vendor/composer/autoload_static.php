@@ -26,6 +26,8 @@ class ComposerStaticInit49a4d4575e55becb62c502463758a48c
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
+        'KPF_Framework_Loader' => __DIR__ . '/../..' . '/work/inc/kpf-framework-loader.php',
+        'KPF_Settings' => __DIR__ . '/../..' . '/work/inc/kpf-settings.php',
         'KP\\WPFieldFramework\\BlockGenerator' => __DIR__ . '/..' . '/kevinpirnie/kpt-wpfieldframework/src/BlockGenerator.php',
         'KP\\WPFieldFramework\\FieldTypes' => __DIR__ . '/..' . '/kevinpirnie/kpt-wpfieldframework/src/FieldTypes.php',
         'KP\\WPFieldFramework\\Framework' => __DIR__ . '/..' . '/kevinpirnie/kpt-wpfieldframework/src/Framework.php',

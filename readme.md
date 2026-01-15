@@ -18,4 +18,4 @@ The MIT License (MIT). Please see [License File](LICENSE) for more information.
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/kpirnie/kpt-datatables/issues)
+- **Issues**: [GitHub Issues](https://github.com/kpirnie/wptheme-kp-framework/issues)
