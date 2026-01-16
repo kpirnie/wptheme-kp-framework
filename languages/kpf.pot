@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-01-16T16:50:47+01:00\n"
+"POT-Creation-Date: 2026-01-16T18:50:48+01:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: kpf\n"
@@ -68,9 +68,7 @@ msgid "Should we disable the REST API?"
 msgstr ""
 
 #: work/inc/kpf-settings.php:128
-#: work/inc/kpf-settings.php:165
-#: work/inc/kpf-settings.php:189
-#: work/inc/kpf-settings.php:201
+#: work/inc/kpf-settings.php:186
 msgid "Get Rid of It!"
 msgstr ""
 
@@ -79,117 +77,106 @@ msgid "Only on the Front-End"
 msgstr ""
 
 #: work/inc/kpf-settings.php:130
-#: work/inc/kpf-settings.php:142
-#: work/inc/kpf-settings.php:154
-#: work/inc/kpf-settings.php:166
-#: work/inc/kpf-settings.php:178
-#: work/inc/kpf-settings.php:190
-#: work/inc/kpf-settings.php:203
-#: work/inc/kpf-settings.php:284
-#: work/inc/kpf-settings.php:296
+#: work/inc/kpf-settings.php:188
+#: work/inc/kpf-settings.php:267
+#: work/inc/kpf-settings.php:279
 msgid "No Way!"
 msgstr ""
 
-#: work/inc/kpf-settings.php:138
+#: work/inc/kpf-settings.php:137
 msgid "Aplication Passwords?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:139
+#: work/inc/kpf-settings.php:138
 msgid "Should we disable Application Passwords?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:141
-#: work/inc/kpf-settings.php:153
-#: work/inc/kpf-settings.php:177
-msgid "Get Rid of Them!"
-msgstr ""
-
-#: work/inc/kpf-settings.php:150
+#: work/inc/kpf-settings.php:146
 msgid "Remove Feeds?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:151
+#: work/inc/kpf-settings.php:147
 msgid "Should we remove all RSS Feeds?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:162
+#: work/inc/kpf-settings.php:155
 msgid "Remove RPC?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:163
+#: work/inc/kpf-settings.php:156
 msgid "Should we remove the XML RPC?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:174
+#: work/inc/kpf-settings.php:164
 msgid "Remove Identifiers?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:175
+#: work/inc/kpf-settings.php:165
 msgid "Should we remove the WordPress Identifiers?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:186
+#: work/inc/kpf-settings.php:173
 msgid "Remove Admin-Bar?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:187
+#: work/inc/kpf-settings.php:174
 msgid "Should we remove the admin bar on the front-end?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:198
+#: work/inc/kpf-settings.php:183
 msgid "Remove Commenting?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:199
+#: work/inc/kpf-settings.php:184
 msgid "Should we remove commenting?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:202
+#: work/inc/kpf-settings.php:187
 msgid "Only for the Selected Post Types!"
 msgstr ""
 
-#: work/inc/kpf-settings.php:211
+#: work/inc/kpf-settings.php:196
 msgid "Post Types"
 msgstr ""
 
-#: work/inc/kpf-settings.php:212
+#: work/inc/kpf-settings.php:197
 msgid "This will remove the commenting capabilities from the selected post types."
 msgstr ""
 
-#: work/inc/kpf-settings.php:248
+#: work/inc/kpf-settings.php:231
 msgid "CSS Framework Settings"
 msgstr ""
 
-#: work/inc/kpf-settings.php:271
+#: work/inc/kpf-settings.php:254
 msgid "Imagery Settings"
 msgstr ""
 
-#: work/inc/kpf-settings.php:280
+#: work/inc/kpf-settings.php:263
 msgid "Allow SVGs?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:281
+#: work/inc/kpf-settings.php:264
 msgid "Should we allow SVGs to be uploaded to the media library?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:283
-#: work/inc/kpf-settings.php:295
+#: work/inc/kpf-settings.php:266
+#: work/inc/kpf-settings.php:278
 msgid "Absolutely!"
 msgstr ""
 
-#: work/inc/kpf-settings.php:292
+#: work/inc/kpf-settings.php:275
 msgid "Allow WEBMs?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:293
+#: work/inc/kpf-settings.php:276
 msgid "Should we allow WEBMs to be uploaded to the media library?"
 msgstr ""
 
-#: work/inc/kpf-settings.php:303
+#: work/inc/kpf-settings.php:286
 msgid "Extra Image Sizes"
 msgstr ""
 
-#: work/inc/kpf-settings.php:304
+#: work/inc/kpf-settings.php:287
 msgid "This will add additional image sizes. WordPress will automagically create them on upload.<br /><strong>NOTE: </strong>If you already have images uploaded, you will need to regenerate your thumbnails."
 msgstr ""
 

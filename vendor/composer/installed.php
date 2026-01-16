@@ -13,7 +13,7 @@
         'kevinpirnie/kpt-wpfieldframework' => array(
             'pretty_version' => 'dev-develop',
             'version' => 'dev-develop',
-            'reference' => 'ca9d3f5f5b0493f7e5d24cf855930068012c2380',
+            'reference' => 'd5ab5209a646c9dbbafe2b1afd5b165e97f484c7',
             'type' => 'library',
             'install_path' => __DIR__ . '/../kevinpirnie/kpt-wpfieldframework',
             'aliases' => array(),

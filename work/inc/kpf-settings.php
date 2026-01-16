@@ -133,63 +133,48 @@ if( ! class_exists( 'KPF_Settings' ) ) {
                             ],
                             [
                                 'id'    => 'kpf_app_password',
-                                'type'  => 'radio',
-                                'inline' => true,
+                                'type'  => 'switch',
                                 'label' => __( 'Aplication Passwords?', 'kpf' ),
                                 'sublabel' => __( 'Should we disable Application Passwords?', 'kpf' ),
-                                'options' => [
-                                    1 => __('Get Rid of Them!', 'kpf' ),
-                                    0 => __('No Way!', 'kpf' ),
-                                ],
-                                'default' => 1,
+                                'on_label'  => 'Yes',
+                                'off_label' => 'No',
+                                'default' => true,
                             ],
                             [
                                 'id'    => 'kpf_remove_feeds',
-                                'type'  => 'radio',
-                                'inline' => true,
+                                'type'  => 'switch',
                                 'label' => __( 'Remove Feeds?', 'kpf' ),
                                 'sublabel' => __( 'Should we remove all RSS Feeds?', 'kpf' ),
-                                'options' => [
-                                    1 => __('Get Rid of Them!', 'kpf' ),
-                                    0 => __('No Way!', 'kpf' ),
-                                ],
-                                'default' => 0,
+                                'on_label'  => 'Yes',
+                                'off_label' => 'No',
+                                'default' => false,
                             ],
                             [
                                 'id'    => 'kpf_remove_rpc',
-                                'type'  => 'radio',
-                                'inline' => true,
+                                'type'  => 'switch',
                                 'label' => __( 'Remove RPC?', 'kpf' ),
                                 'sublabel' => __( 'Should we remove the XML RPC?', 'kpf' ),
-                                'options' => [
-                                    1 => __('Get Rid of It!', 'kpf' ),
-                                    0 => __('No Way!', 'kpf' ),
-                                ],
-                                'default' => 1,
+                                'on_label'  => 'Yes',
+                                'off_label' => 'No',
+                                'default' => true,
                             ],
                             [
                                 'id'    => 'kpf_remove_identifiers',
-                                'type'  => 'radio',
-                                'inline' => true,
+                                'type'  => 'switch',
                                 'label' => __( 'Remove Identifiers?', 'kpf' ),
                                 'sublabel' => __( 'Should we remove the WordPress Identifiers?', 'kpf' ),
-                                'options' => [
-                                    1 => __('Get Rid of Them!', 'kpf' ),
-                                    0 => __('No Way!', 'kpf' ),
-                                ],
-                                'default' => 1,
+                                'on_label'  => 'Yes',
+                                'off_label' => 'No',
+                                'default' => false,
                             ],
                             [
                                 'id'    => 'kpf_remove_adminbar',
-                                'type'  => 'radio',
-                                'inline' => true,
+                                'type'  => 'switch',
                                 'label' => __( 'Remove Admin-Bar?', 'kpf' ),
                                 'sublabel' => __( 'Should we remove the admin bar on the front-end?', 'kpf' ),
-                                'options' => [
-                                    1 => __('Get Rid of It!', 'kpf' ),
-                                    0 => __('No Way!', 'kpf' ),
-                                ],
-                                'default' => 1,
+                                'on_label'  => 'Yes',
+                                'off_label' => 'No',
+                                'default' => true,
                             ],
                             [
                                 'id'    => 'kpf_remove_commenting',
@@ -211,13 +196,11 @@ if( ! class_exists( 'KPF_Settings' ) ) {
                                 'label' => __('Post Types', 'kpf'),
                                 'sublabel' => __('This will remove the commenting capabilities from the selected post types.', 'kpf'),
                                 'options' => $this -> get_all_post_types(),
-                                'size' => 5,
+                                'size' => 100,
                                 'conditional' => [
-                                    'AND' => [ // <- OR
-                                        'field' => '', // field id
-                                        'value' => true, // value 
-                                        'condition' => '==' // ==, !=, >, <, >=, <=, IN, NOT_IN
-                                    ],
+                                    'field' => 'kpf_remove_commenting',
+                                    'value' => '1',
+                                    'condition' => '==',
                                 ],
                             ]
                             

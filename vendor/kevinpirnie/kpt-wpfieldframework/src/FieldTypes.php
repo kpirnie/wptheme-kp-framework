@@ -56,6 +56,7 @@ class FieldTypes
         'multiselect',
         'checkbox',
         'checkboxes',
+        'switch',
         'radio',
         'link',
         // Text areas/editors.
@@ -93,6 +94,7 @@ class FieldTypes
         'name'        => '',
         'type'        => 'text',
         'label'       => '',
+        'sublabel'    => '',
         'description' => '',
         'default'     => '',
         'class'       => '',
@@ -102,6 +104,7 @@ class FieldTypes
         'readonly'    => false,
         'options'     => array(),
         'attributes'  => array(),
+        'conditional'  => array(),
     );
     /**
      * Check if a field type is supported.
@@ -183,15 +186,11 @@ class FieldTypes
 
         $html = '';
         if ($context === 'options') {
-
             // Options page table row format.
             $html .= '<tr class="options-row">';
             $html .= '<th scope="row">';
             $html .= $this->renderLabel($field);
-            // if a sublabel exists
-            if($field['sublabel']) {
-                $html .= '<small>'.esc_html($field['sublabel']).'</small>';
-            }
+            $html .= $this->renderSublabel($field);
             $html .= '</th>';
             $html .= '<td>';
             $html .= $this->render($field, $value);
@@ -199,15 +198,13 @@ class FieldTypes
             $html .= '</td>';
             $html .= '</tr>';
         } else {
-            
             // Meta box / user profile format.
-            $html .= '<div class="kp-wsf-field kp-wsf-field--' . esc_attr($field['type']) . '">';
+            $conditional_attrs = $this->buildConditionalAttributes($field);
+            $conditional_class = ! empty($field['conditional']) ? ' kp-wsf-conditional-field' : '';
+            $html .= '<div class="kp-wsf-field kp-wsf-field--' . esc_attr($field['type']) . $conditional_class . '"' . $conditional_attrs . '>';
             $html .= '<div class="kp-wsf-field__label">';
             $html .= $this->renderLabel($field);
-            // if a sublabel exists
-            if($field['sublabel']) {
-                $html .= '<small>'.esc_html($field['sublabel']).'</small>';
-            }
+            $html .= $this->renderSublabel($field);
             $html .= '</div>';
             $html .= '<div class="kp-wsf-field__input">';
             $html .= $this->render($field, $value);
@@ -260,6 +257,22 @@ class FieldTypes
     }
 
     /**
+     * Render a field sublabel.
+     *
+     * @since  1.0.0
+     * @param  array $field The field configuration.
+     * @return string       The sublabel HTML.
+     */
+    public function renderSublabel(array $field): string
+    {
+        if (empty($field['sublabel'])) {
+            return '';
+        }
+
+        return sprintf('<span class="kp-wsf-sublabel">%s</span>', wp_kses_post($field['sublabel']));
+    }
+
+    /**
      * Build common HTML attributes for input fields.
      *
      * @since  1.0.0
@@ -308,6 +321,22 @@ class FieldTypes
         }
 
         return $attr_string;
+    }
+
+    /**
+     * Build conditional data attributes for a field.
+     *
+     * @since  1.0.0
+     * @param  array $field The field configuration.
+     * @return string       The data attributes string.
+     */
+    private function buildConditionalAttributes(array $field): string
+    {
+        if (empty($field['conditional'])) {
+            return '';
+        }
+
+        return sprintf(' data-kp-wsf-conditional="%s"', esc_attr(wp_json_encode($field['conditional'])));
     }
 
     /**
@@ -668,15 +697,16 @@ class FieldTypes
             $checked = in_array((string) $opt_value, array_map('strval', $value), true) ? ' checked="checked"' : '';
             $opt_id = $field['id'] . '_' . sanitize_key($opt_value);
             $html .= sprintf(
-                '<label for="%s"><input type="checkbox" id="%s" name="%s[]" value="%s"%s%s /> %s</label>%s', 
-                esc_attr($opt_id), 
-                esc_attr($opt_id), 
-                esc_attr($field['name']), 
-                esc_attr($opt_value), 
-                $checked, 
+                '<label for="%s"><input type="checkbox" id="%s" name="%s[]" value="%s"%s%s /> %s</label>%s',
+                esc_attr($opt_id),
+                esc_attr($opt_id),
+                esc_attr($field['name']),
+                esc_attr($opt_value),
+                $checked,
                 $this->buildAttributes($field),
                 esc_html($opt_label),
-                ($is_inline) ? '' : '<br />');
+                ($is_inline) ? '' : '<br />'
+            );
         }
 
         $html .= '</fieldset>';
@@ -700,18 +730,50 @@ class FieldTypes
             $checked = checked($value, $opt_value, false);
             $opt_id = $field['id'] . '_' . sanitize_key($opt_value);
             $html .= sprintf(
-                '<label for="%s"><input type="radio" id="%s" name="%s" value="%s"%s%s /> %s</label>%s', 
-                esc_attr($opt_id), 
-                esc_attr($opt_id), 
-                esc_attr($field['name']), 
-                esc_attr($opt_value), 
-                $checked, 
+                '<label for="%s"><input type="radio" id="%s" name="%s" value="%s"%s%s /> %s</label>%s',
+                esc_attr($opt_id),
+                esc_attr($opt_id),
+                esc_attr($field['name']),
+                esc_attr($opt_value),
+                $checked,
                 $this->buildAttributes($field),
                 esc_html($opt_label),
-                ($is_inline) ? '' : '<br />');
+                ($is_inline) ? '' : '<br />'
+            );
         }
 
         $html .= '</fieldset>';
+        return $html;
+    }
+
+    /**
+     * Render a switch toggle field.
+     *
+     * @since  1.0.0
+     * @param  array $field The field configuration.
+     * @param  mixed $value The current value.
+     * @return string       The field HTML.
+     */
+    private function renderSwitch(array $field, mixed $value): string
+    {
+        $checked = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        $on_label = $field['on_label'] ?? __('On', 'kp-wsf');
+        $off_label = $field['off_label'] ?? __('Off', 'kp-wsf');
+
+        $html = '<div class="kp-wsf-switch-field">';
+        $html .= sprintf('<span class="kp-wsf-switch-label kp-wsf-switch-label--off">%s</span>', esc_html($off_label));
+        $html .= '<label class="kp-wsf-switch">';
+        $html .= sprintf(
+            '<input type="checkbox" id="%s" name="%s" value="1"%s />',
+            esc_attr($field['id']),
+            esc_attr($field['name']),
+            $checked ? ' checked="checked"' : ''
+        );
+        $html .= '<span class="kp-wsf-switch-slider"></span>';
+        $html .= '</label>';
+        $html .= sprintf('<span class="kp-wsf-switch-label kp-wsf-switch-label--on">%s</span>', esc_html($on_label));
+        $html .= '</div>';
+
         return $html;
     }
 
