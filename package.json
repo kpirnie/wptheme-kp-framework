@@ -3,16 +3,26 @@
     "version": "1.0.1",
     "description": "KP Theme Framework - WordPress parent theme with CSS framework selection",
     "scripts": {
-        "build": "npm run build:blocks && npm run build:tailwind",
+        "build": "npm run build:blocks && npm run build:css && npm run build:js",
         "build:blocks": "wp-scripts build",
-        "build:tailwind": "npx tailwindcss -i ./src/css/tailwind-input.css -o ./assets/css/tailwind.css --minify",
-        "start": "npm run start:blocks & npm run watch:tailwind",
+        "build:css": "postcss src/css/main.css -o assets/css/theme.css",
+        "build:js": "esbuild src/js/main.js --bundle --minify --outfile=assets/js/theme.js",
+        "start": "npm run start:blocks & npm run watch:css & npm run watch:js",
         "start:blocks": "wp-scripts start",
-        "watch:tailwind": "npx tailwindcss -i ./src/css/tailwind-input.css -o ./assets/css/tailwind.css --watch"
+        "watch:css": "postcss src/css/main.css -o assets/css/theme.css --watch",
+        "watch:js": "esbuild src/js/main.js --bundle --outfile=assets/js/theme.js --watch"
     },
     "devDependencies": {
+        "@tailwindcss/aspect-ratio": "^0.4.2",
+        "@tailwindcss/container-queries": "^0.1.1",
+        "@tailwindcss/forms": "^0.5.9",
         "@tailwindcss/typography": "^0.5.15",
         "@wordpress/scripts": "^31.1.0",
+        "cssnano": "^7.0.6",
+        "esbuild": "^0.24.0",
+        "postcss": "^8.4.49",
+        "postcss-cli": "^11.0.0",
+        "postcss-import": "^16.1.0",
         "tailwindcss": "^3.4.17"
     }
 }

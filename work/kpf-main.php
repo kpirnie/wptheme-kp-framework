@@ -15,6 +15,7 @@
 // We don't want to allow direct access to this
 defined( 'ABSPATH' ) || die( 'No direct script access allowed' );
 
+// make sure we aren't loading in the class multiple times
 if( ! class_exists( 'KPF_Main' ) ) {
 
     /** 
@@ -31,29 +32,7 @@ if( ! class_exists( 'KPF_Main' ) ) {
     class KPF_Main {
 
         /**
-         * Instance of the class
-         * 
-         * @author Kevin Pirnie <iam@kevinpirnie.com>
-         * @copyright 2025 Kevin Pirnie
-         * 
-         * @since 1.0.1
-         * @package KP Theme Framework
-         * @access private
-         * 
-         * @var KPF_Main
-         */
-        private ?KPF_Main $_instance = null;
-
-        /**
-         * Constructor
-         */
-        public function __construct() {
-            $this->define_constants();
-            $this->init_hooks();
-        }
-
-        /**
-         * Get the instance of the class
+         * Initialize the theme's functionality
          * 
          * @author Kevin Pirnie <iam@kevinpirnie.com>
          * @copyright 2025 Kevin Pirnie
@@ -61,14 +40,18 @@ if( ! class_exists( 'KPF_Main' ) ) {
          * @since 1.0.1
          * @package KP Theme Framework
          * @access public
+         * @static
          * 
-         * @return KPF_Main Returns the instance of this class
+         * @return void Returns nothing
          */
-        public function initialize(): KPF_Main {
-            if( is_null( $this->_instance ) ) {
-                $this->_instance = new self();
-            }
-            return $this->_instance;
+        public static function init( ) : void {
+
+            // setup the theme's defined constants
+            self::define_constants( );
+
+            // initialize the hooks we'll utilize
+            self::init_hooks( );
+
         }
 
         /**
@@ -80,10 +63,12 @@ if( ! class_exists( 'KPF_Main' ) ) {
          * @since 1.0.1
          * @package KP Theme Framework
          * @access private
+         * @static
          * 
          * @return void Returns nothing
          */
-        private function define_constants(): void {
+        private static function define_constants(): void {
+            
             // Theme version
             defined( 'KPF_VERSION' ) || define( 'KPF_VERSION', wp_get_theme()->get( 'Version' ) ?? '1.0.0' );
             
@@ -104,135 +89,45 @@ if( ! class_exists( 'KPF_Main' ) ) {
          * @since 1.0.1
          * @package KP Theme Framework
          * @access private
+         * @static
          * 
          * @return void Returns nothing
          */
-        private function init_hooks(): void {
+        private static function init_hooks(): void {
 
-            // Load includes after theme setup
-            add_action( 'after_setup_theme', function() { $this -> load_includes( ); }, 5 );
-            
             // Initialize theme settings
-            add_action( 'after_setup_theme', function() { $this -> init_settings( ); }, 10 );
+            add_action( 'after_setup_theme', function( ) { 
+
+                // fire up the settings class
+                new KPF_Settings( );
+
+            }, 10 );
             
             // Enqueue assets
-            add_action( 'wp_enqueue_scripts', function() { $this -> enqueue_assets( ); }, 10 );
+            add_action( 'wp_enqueue_scripts', function( ) {
+
+                // fire up the asset class
+                $assets = new KPF_Framework_Loader( );
+
+                // properly enqueue our assets
+                $assets -> enqueue_framework( );
+
+                // clean up
+                unset( $assets );
+                
+                
+            }, 10 );
             
             // Admin assets
-            add_action( 'admin_enqueue_scripts', function() { $this -> admin_enqueue_assets( ); }, 10 );
+            add_action( 'admin_enqueue_scripts', function( ) {
 
-        }
 
-        /**
-         * Load include files
-         * 
-         * @author Kevin Pirnie <iam@kevinpirnie.com>
-         * @copyright 2025 Kevin Pirnie
-         * 
-         * @since 1.0.1
-         * @package KP Theme Framework
-         * @access private
-         * 
-         * @return void Returns nothing
-         */
-        private function load_includes(): void {
+                
+            }, 10 );
 
-            // include the autoloader
-            include_once KPF_PATH . '/vendor/autoload.php';
-        }
+            // initialization
+            add_action( 'init', function( ) { return false; } );
 
-        /**
-         * Initialize theme settings
-         * 
-         * @author Kevin Pirnie <iam@kevinpirnie.com>
-         * @copyright 2025 Kevin Pirnie
-         * 
-         * @since 1.0.1
-         * @package KP Theme Framework
-         * @access private
-         * 
-         * @return void Returns nothing
-         */
-        private function init_settings(): void {
-
-            // Initialize the settings page
-            if( class_exists( 'KPF_Settings' ) ) {
-                KPF_Settings::instance();
-            }
-        }
-
-        /**
-         * Enqueue frontend assets
-         * 
-         * @author Kevin Pirnie <iam@kevinpirnie.com>
-         * @copyright 2025 Kevin Pirnie
-         * 
-         * @since 1.0.1
-         * @package KP Theme Framework
-         * @access private
-         * 
-         * @return void Returns nothing
-         */
-        private function enqueue_assets(): void {
-
-            // Load the selected CSS framework
-            if( class_exists( 'KPF_Framework_Loader' ) ) {
-                KPF_Framework_Loader::instance()->enqueue_framework();
-            }
-
-            // Theme stylesheet
-            wp_enqueue_style( 
-                'kpf-style', 
-                KPF_URL . '/style.css', 
-                [], 
-                KPF_VERSION 
-            );
-
-            // Theme custom CSS (built from Tailwind if selected)
-            if( file_exists( KPF_PATH . '/assets/css/theme.css' ) ) {
-                wp_enqueue_style( 
-                    'kpf-theme-css', 
-                    KPF_ASSETS_URL . '/css/theme.css', 
-                    [], 
-                    KPF_VERSION 
-                );
-            }
-
-            // Theme JS
-            if( file_exists( KPF_PATH . '/assets/js/theme.js' ) ) {
-                wp_enqueue_script( 
-                    'kpf-theme-js', 
-                    KPF_ASSETS_URL . '/js/theme.js', 
-                    [], 
-                    KPF_VERSION, 
-                    true 
-                );
-            }
-        }
-
-        /**
-         * Enqueue admin assets
-         * 
-         * @author Kevin Pirnie <iam@kevinpirnie.com>
-         * @copyright 2025 Kevin Pirnie
-         * 
-         * @since 1.0.1
-         * @package KP Theme Framework
-         * @access private
-         * 
-         * @return void Returns nothing
-         */
-        private function admin_enqueue_assets(): void {
-
-            // Admin styles if needed
-            if( file_exists( KPF_PATH . '/assets/css/admin.css' ) ) {
-                wp_enqueue_style( 
-                    'kpf-admin-css', 
-                    KPF_ASSETS_URL . '/css/admin.css', 
-                    [], 
-                    KPF_VERSION 
-                );
-            }
         }
 
     }

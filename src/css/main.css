@@ -1,0 +1,27 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+@import "./components/reset.css";
+@import "./components/accessibility.css";
+@import "./components/wordpress.css";
+@import "./components/typography.css";
+@import "./components/grid.css";
+@import "./components/utilities.css";
+@import "./components/forms.css";
+@import "./components/buttons.css";
+@import "./components/tables.css";
+@import "./components/alerts.css";
+@import "./components/cards.css";
+@import "./components/navigation.css";
+@import "./components/modals.css";
+@import "./components/images.css";
+@import "./components/badges.css";
+@import "./components/spinners.css";
+@import "./components/progress.css";
+@import "./components/tooltips.css";
+@import "./components/lists.css";
+@import "./components/accordions.css";
+@import "./components/tabs.css";
+@import "./components/embeds.css";
+@import "./components/scroll-to-top.css";

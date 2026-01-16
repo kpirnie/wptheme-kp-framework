@@ -20,7 +20,7 @@
     <a class="skip-link screen-reader-text" href="#main"><?php esc_html_e( 'Skip to content', 'kpf' ); ?></a>
 
     <header id="masthead" class="site-header">
-        <?php kpf_container(); ?>
+        <?php //kpf_container(); ?>
         
         <div class="site-branding">
             <?php if ( has_custom_logo() ) : ?>
@@ -51,5 +51,5 @@
             ?>
         </nav>
         
-        <?php kpf_container_end(); ?>
+        <?php //kpf_container_end(); ?>
     </header>

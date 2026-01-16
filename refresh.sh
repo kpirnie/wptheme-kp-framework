@@ -27,6 +27,9 @@ rm -rf $APP_PATH/node_modules && npm install --prefix "$APP_PATH"
 # now refresh NPM
 npm run build --prefix "$APP_PATH"
 
+# generate the languar file(s)
+sudo -u $APP_USER wp i18n make-pot $APP_PATH languages/kpf.pot --domain=kpf
+
 # just inn case php is caching
 service php8.4-fpm restart && service nginx reload
 

@@ -6,19 +6,19 @@
             "version_normalized": "dev-develop",
             "source": {
                 "type": "git",
-                "url": "https://github.com/kpirnie/kpt-wpfieldframework.git",
-                "reference": "78f6b81d254d19684c7c6621ceb86fa693af5812"
+                "url": "https://github.com/kpirnie/kp-wpfieldframework.git",
+                "reference": "ca9d3f5f5b0493f7e5d24cf855930068012c2380"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/kpirnie/kpt-wpfieldframework/zipball/78f6b81d254d19684c7c6621ceb86fa693af5812",
-                "reference": "78f6b81d254d19684c7c6621ceb86fa693af5812",
+                "url": "https://api.github.com/repos/kpirnie/kp-wpfieldframework/zipball/ca9d3f5f5b0493f7e5d24cf855930068012c2380",
+                "reference": "ca9d3f5f5b0493f7e5d24cf855930068012c2380",
                 "shasum": ""
             },
             "require": {
                 "php": ">=8.2"
             },
-            "time": "2026-01-11T13:07:10+00:00",
+            "time": "2026-01-16T15:09:33+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {

@@ -7,7 +7,7 @@
 ?>
 
     <footer id="colophon" class="site-footer">
-        <?php kpf_container(); ?>
+        <?php //kpf_container(); ?>
         
         <?php if ( is_active_sidebar( 'footer-1' ) ) : ?>
             <div class="footer-widgets">
@@ -28,7 +28,7 @@
             <p>&copy; <?php echo date( 'Y' ); ?> <?php bloginfo( 'name' ); ?></p>
         </div>
         
-        <?php kpf_container_end(); ?>
+        <?php //kpf_container_end(); ?>
     </footer>
 
 </div><!-- #page -->

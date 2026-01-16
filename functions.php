@@ -16,14 +16,11 @@
 // We don't want to allow direct access to this
 defined( 'ABSPATH' ) || die( 'No direct script access allowed' );
 
-// fire up the main class
-$kpf = new KPF_Main( );
+// include the autoloader
+include_once dirname( __FILE__ ) . '/vendor/autoload.php';
 
-// initialize it
-$kpf -> initialize( );
-
-// now clean up
-unset( $kpf );
+// initialize the them
+KPF_Main::init( );
 
 /**
  * Get theme option
@@ -39,9 +36,12 @@ unset( $kpf );
  * @param mixed $default Default value
  * @return mixed Returns the value of the option requested
  */
-if( ! function_exists( 'get_option' ) ) {
-    function get_option( string $key, mixed $default = null ): mixed {
-        $options = get_option( 'kpf_theme_settings', [] );
-        return $options[$key] ?? $default;
+if( ! function_exists( 'get_kpf_option' ) ) {
+
+    // get the theme option
+    function get_kpf_option( string $key, mixed $default = null ): mixed {
+
+        // return the option from the framework
+        return \KP\WPFieldFramework\Framework::getInstance()->getStorage()->getOption( $key, $default);
     }
 }

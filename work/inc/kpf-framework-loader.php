@@ -1,72 +1,297 @@
 <?php
-/**
+/** 
+ * 
  * Framework Loader Class
  * 
  * Handles loading the selected CSS framework from CDN or locally
  * 
- * @since 8.4
- * @author Kevin Pirnie <me@kpirnie.com>
- * @package KP Framework
+ * @author Kevin Pirnie <iam@kevinpirnie.com>
+ * @copyright 2025 Kevin Pirnie
  * 
- */
+ * @since 1.0.1
+ * @package KP Theme Framework
+ * 
+*/
 
 // We don't want to allow direct access to this
 defined( 'ABSPATH' ) || die( 'No direct script access allowed' );
 
+// make sure we aren't loading in the class multiple times
 if( ! class_exists( 'KPF_Framework_Loader' ) ) {
 
-    /**
-     * Class KPF_Framework_Loader
+    /** 
+     * KPF_Framework_Loader
      * 
-     * Loads the selected CSS framework
+     * @author Kevin Pirnie <iam@kevinpirnie.com>
+     * @copyright 2025 Kevin Pirnie
      * 
-     * @since 8.4
+     * @since 1.0.1
+     * @package KP Theme Framework
      * @access public
-     * @author Kevin Pirnie <me@kpirnie.com>
-     * @package KP Framework
      * 
-     */
+    */
     class KPF_Framework_Loader {
 
         /**
-         * Instance
-         * 
-         * @var KPF_Framework_Loader|null
+         * Initialize
+         * @var bool
          */
-        private static ?KPF_Framework_Loader $_instance = null;
+        private bool $initialized = false;
 
         /**
          * Settings
-         * 
          * @var array
          */
         private array $settings = [];
 
         /**
          * Framework configurations
-         * 
          * @var array
          */
         private array $frameworks = [];
 
         /**
-         * Get instance
+         * Class constructor.
          * 
-         * @return KPF_Framework_Loader
+         * Setup the object
+         * 
+         * @internal
          */
-        public static function instance(): KPF_Framework_Loader {
-            if( is_null( self::$_instance ) ) {
-                self::$_instance = new self();
-            }
-            return self::$_instance;
+        public function __construct() {
+
+            // hold the internals
+            $this -> settings = [];
+            $this -> frameworks = [];
+
+            // initialize us
+            $this -> init( );
         }
 
         /**
-         * Constructor
+         * Class destructor.
+         * 
+         * Cleans up internal state and releases resources.
+         * 
+         * @internal
          */
-        private function __construct() {
-            $this->load_settings();
-            $this->setup_frameworks();
+        public function __destruct() {
+
+            // clean up the internals
+            unset( $this->settings, $this->frameworks );
+        }
+
+        /**
+         * enqueue_framework
+         * 
+         * Enqueue the selected framework
+         * 
+         * @author Kevin Pirnie <iam@kevinpirnie.com>
+         * @copyright 2025 Kevin Pirnie
+         * 
+         * @since 1.0.1
+         * @package KP Theme Framework
+         * @access public
+         * 
+         * @return void Returns nothing
+         */
+        public function enqueue_framework(): void {
+
+            // Fire action before framework is enqueued
+            do_action( 'kpf_before_framework_enqueue' );
+
+            $framework = $this->settings['css_framework'];
+
+            // Exit if no framework selected
+            if( $framework === 'none' || ! isset( $this->frameworks[ $framework ] ) ) {
+                return;
+            }
+
+            $config = $this->frameworks[ $framework ];
+            $version = $this->get_resolved_version( $framework );
+            $use_cdn = $this->settings['load_from_cdn'];
+            $load_js = $this->settings['load_framework_js'];
+            $custom_cdn = $this->settings['custom_cdn_url'];
+
+            // Handle Tailwind CSS specially
+            if( $framework === 'tailwind' ) {
+                $this->enqueue_tailwind( $config, $use_cdn );
+                return;
+            }
+
+            // Enqueue CSS
+            $css_url = $this->get_asset_url( $config, 'css', $version, $custom_cdn, $use_cdn );
+            if( $css_url ) {
+                $integrity = $this->get_integrity( $framework, $version, 'css' );
+                wp_enqueue_style(
+                    'kpf-' . $config['handle'],
+                    $css_url,
+                    [],
+                    $use_cdn ? null : $version
+                );
+
+                // Add integrity and crossorigin attributes for CDN resources
+                if( $use_cdn && $integrity ) {
+                    add_filter( 'style_loader_tag', function( $tag, $handle ) use ( $config, $integrity ) {
+                        if( $handle === 'kpf-' . $config['handle'] ) {
+                            $tag = str_replace(
+                                ' href=',
+                                ' integrity="' . esc_attr( $integrity ) . '" crossorigin="anonymous" href=',
+                                $tag
+                            );
+                        }
+                        return $tag;
+                    }, 10, 2 );
+                }
+            }
+
+            // Enqueue JS if enabled and available
+            if( $load_js ) {
+                $js_url = $this->get_asset_url( $config, 'js', $version, $custom_cdn, $use_cdn );
+                if( $js_url ) {
+                    $deps = $config['dependencies']['js'] ?? [];
+                    $integrity = $this->get_integrity( $framework, $version, 'js' );
+                    
+                    wp_enqueue_script(
+                        'kpf-' . $config['handle'],
+                        $js_url,
+                        $deps,
+                        $use_cdn ? null : $version,
+                        true
+                    );
+
+                    // Add integrity and crossorigin attributes for CDN resources
+                    if( $use_cdn && $integrity ) {
+                        add_filter( 'script_loader_tag', function( $tag, $handle ) use ( $config, $integrity ) {
+                            if( $handle === 'kpf-' . $config['handle'] ) {
+                                $tag = str_replace(
+                                    ' src=',
+                                    ' integrity="' . esc_attr( $integrity ) . '" crossorigin="anonymous" src=',
+                                    $tag
+                                );
+                            }
+                            return $tag;
+                        }, 10, 2 );
+                    }
+
+                    // Load UIKit icons if UIKit
+                    if( $framework === 'uikit' && isset( $config['cdn']['icons'] ) ) {
+                        $icons_url = str_replace( '{version}', $version, $config['cdn']['icons'] );
+                        wp_enqueue_script(
+                            'kpf-uikit-icons',
+                            $icons_url,
+                            [ 'kpf-uikit' ],
+                            null,
+                            true
+                        );
+                    }
+                }
+            }
+
+            // Fire action after framework is enqueued
+            do_action( 'kpf_after_framework_enqueue', $framework, $config, $version );
+        }
+
+        /**
+         * get_current_framework
+         * 
+         * Get the current selected framework
+         * 
+         * @author Kevin Pirnie <iam@kevinpirnie.com>
+         * @copyright 2025 Kevin Pirnie
+         * 
+         * @since 1.0.1
+         * @package KP Theme Framework
+         * @access public
+         * 
+         * @return string Returns the framework name
+         */
+        public function get_current_framework(): string {
+            return $this->settings['css_framework'];
+        }
+
+        /**
+         * get_framework_config
+         * 
+         * Get framework configuration
+         * 
+         * @author Kevin Pirnie <iam@kevinpirnie.com>
+         * @copyright 2025 Kevin Pirnie
+         * 
+         * @since 1.0.1
+         * @package KP Theme Framework
+         * @access public
+         * 
+         * @param string|null $framework Framework key (null for current)
+         * @return array|null
+         */
+        public function get_framework_config( ?string $framework = null ): ?array {
+            $framework = $framework ?? $this->settings['css_framework'];
+            return $this->frameworks[ $framework ] ?? null;
+        }
+
+        /**
+         * is_framework_active
+         * 
+         * Check if a specific framework is active
+         * 
+         * @author Kevin Pirnie <iam@kevinpirnie.com>
+         * @copyright 2025 Kevin Pirnie
+         * 
+         * @since 1.0.1
+         * @package KP Theme Framework
+         * @access public
+         * 
+         * @param string $framework Framework key
+         * @return bool Returns if the specific framework is active ot not
+         */
+        public function is_framework_active( string $framework ): bool {
+            return $this->settings['css_framework'] === $framework;
+        }
+
+        /**
+         * get_available_frameworks
+         * 
+         * Get all available frameworks
+         * 
+         * @author Kevin Pirnie <iam@kevinpirnie.com>
+         * @copyright 2025 Kevin Pirnie
+         * 
+         * @since 1.0.1
+         * @package KP Theme Framework
+         * @access public
+         * 
+         * @return array Returns the array of all available frameworks
+         */
+        public function get_available_frameworks(): array {
+            return array_keys( $this->frameworks );
+        }
+
+        /**
+         * Initializes or retrieves the instance.
+         * 
+         * @author Kevin Pirnie <iam@kevinpirnie.com>
+         * @copyright 2025 Kevin Pirnie
+         * 
+         * @since 1.0.1
+         * @package KP Theme Framework
+         * @access private
+         * 
+         * @return self Returns $this for method chaining
+         * @internal
+         */
+        private function init(): self {
+
+            // if we're already initialized
+            if ($this->initialized) {
+                return $this;
+            }
+
+            // load up the internal settings and the internal framework
+            $this->load_settings( );
+            $this->setup_frameworks( );
+
+            // return the initialized object
+            return $this;
         }
 
         /**
@@ -75,6 +300,7 @@ if( ! class_exists( 'KPF_Framework_Loader' ) ) {
          * @return void
          */
         private function load_settings(): void {
+
             $defaults = [
                 'css_framework' => 'none',
                 'framework_version' => 'latest',
@@ -84,7 +310,7 @@ if( ! class_exists( 'KPF_Framework_Loader' ) ) {
             ];
 
             $this->settings = wp_parse_args(
-                get_option( 'kpf_theme_settings', [] ),
+                get_kpf_option( 'kpf_theme_settings', [] ),
                 $defaults
             );
         }
@@ -197,104 +423,6 @@ if( ! class_exists( 'KPF_Framework_Loader' ) ) {
         }
 
         /**
-         * Enqueue the selected framework
-         * 
-         * @return void
-         */
-        public function enqueue_framework(): void {
-            $framework = $this->settings['css_framework'];
-
-            // Exit if no framework selected
-            if( $framework === 'none' || ! isset( $this->frameworks[ $framework ] ) ) {
-                return;
-            }
-
-            $config = $this->frameworks[ $framework ];
-            $version = $this->get_resolved_version( $framework );
-            $use_cdn = $this->settings['load_from_cdn'];
-            $load_js = $this->settings['load_framework_js'];
-            $custom_cdn = $this->settings['custom_cdn_url'];
-
-            // Handle Tailwind CSS specially
-            if( $framework === 'tailwind' ) {
-                $this->enqueue_tailwind( $config, $use_cdn );
-                return;
-            }
-
-            // Enqueue CSS
-            $css_url = $this->get_asset_url( $config, 'css', $version, $custom_cdn, $use_cdn );
-            if( $css_url ) {
-                $integrity = $this->get_integrity( $framework, $version, 'css' );
-                wp_enqueue_style(
-                    'kpf-' . $config['handle'],
-                    $css_url,
-                    [],
-                    $use_cdn ? null : $version
-                );
-
-                // Add integrity and crossorigin attributes for CDN resources
-                if( $use_cdn && $integrity ) {
-                    add_filter( 'style_loader_tag', function( $tag, $handle ) use ( $config, $integrity ) {
-                        if( $handle === 'kpf-' . $config['handle'] ) {
-                            $tag = str_replace(
-                                ' href=',
-                                ' integrity="' . esc_attr( $integrity ) . '" crossorigin="anonymous" href=',
-                                $tag
-                            );
-                        }
-                        return $tag;
-                    }, 10, 2 );
-                }
-            }
-
-            // Enqueue JS if enabled and available
-            if( $load_js ) {
-                $js_url = $this->get_asset_url( $config, 'js', $version, $custom_cdn, $use_cdn );
-                if( $js_url ) {
-                    $deps = $config['dependencies']['js'] ?? [];
-                    $integrity = $this->get_integrity( $framework, $version, 'js' );
-                    
-                    wp_enqueue_script(
-                        'kpf-' . $config['handle'],
-                        $js_url,
-                        $deps,
-                        $use_cdn ? null : $version,
-                        true
-                    );
-
-                    // Add integrity and crossorigin attributes for CDN resources
-                    if( $use_cdn && $integrity ) {
-                        add_filter( 'script_loader_tag', function( $tag, $handle ) use ( $config, $integrity ) {
-                            if( $handle === 'kpf-' . $config['handle'] ) {
-                                $tag = str_replace(
-                                    ' src=',
-                                    ' integrity="' . esc_attr( $integrity ) . '" crossorigin="anonymous" src=',
-                                    $tag
-                                );
-                            }
-                            return $tag;
-                        }, 10, 2 );
-                    }
-
-                    // Load UIKit icons if UIKit
-                    if( $framework === 'uikit' && isset( $config['cdn']['icons'] ) ) {
-                        $icons_url = str_replace( '{version}', $version, $config['cdn']['icons'] );
-                        wp_enqueue_script(
-                            'kpf-uikit-icons',
-                            $icons_url,
-                            [ 'kpf-uikit' ],
-                            null,
-                            true
-                        );
-                    }
-                }
-            }
-
-            // Fire action after framework is enqueued
-            do_action( 'kpf_after_framework_enqueue', $framework, $config, $version );
-        }
-
-        /**
          * Enqueue Tailwind CSS
          * 
          * @param array $config Framework configuration
@@ -302,6 +430,7 @@ if( ! class_exists( 'KPF_Framework_Loader' ) ) {
          * @return void
          */
         private function enqueue_tailwind( array $config, bool $use_cdn ): void {
+
             if( $use_cdn ) {
                 // Use Tailwind Play CDN for development
                 wp_enqueue_script(
@@ -426,45 +555,6 @@ if( ! class_exists( 'KPF_Framework_Loader' ) ) {
          */
         private function get_integrity( string $framework, string $version, string $type ): string {
             return $this->frameworks[ $framework ]['integrity'][ $version ][ $type ] ?? '';
-        }
-
-        /**
-         * Get current framework
-         * 
-         * @return string
-         */
-        public function get_current_framework(): string {
-            return $this->settings['css_framework'];
-        }
-
-        /**
-         * Get framework configuration
-         * 
-         * @param string|null $framework Framework key (null for current)
-         * @return array|null
-         */
-        public function get_framework_config( ?string $framework = null ): ?array {
-            $framework = $framework ?? $this->settings['css_framework'];
-            return $this->frameworks[ $framework ] ?? null;
-        }
-
-        /**
-         * Check if a specific framework is active
-         * 
-         * @param string $framework Framework key
-         * @return bool
-         */
-        public function is_framework_active( string $framework ): bool {
-            return $this->settings['css_framework'] === $framework;
-        }
-
-        /**
-         * Get all available frameworks
-         * 
-         * @return array
-         */
-        public function get_available_frameworks(): array {
-            return array_keys( $this->frameworks );
         }
 
     }

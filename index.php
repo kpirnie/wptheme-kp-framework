@@ -9,7 +9,7 @@ get_header();
 ?>
 
 <main id="main" class="site-main">
-    <?php kpf_container(); ?>
+    <?php //kpf_container(); ?>
     
     <?php if ( have_posts() ) : ?>
         
@@ -35,7 +35,7 @@ get_header();
         
     <?php endif; ?>
     
-    <?php kpf_container_end(); ?>
+    <?php //kpf_container_end(); ?>
 </main>
 
 <?php
