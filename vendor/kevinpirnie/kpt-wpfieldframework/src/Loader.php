@@ -47,6 +47,14 @@ final class Loader
     private const NAMESPACE_PREFIX = 'KP\\WPFieldFramework\\';
 
     /**
+     * Cached requirements check result.
+     *
+     * @since 1.0.0
+     * @var array|null
+     */
+    private static ?array $requirements_cache = null;
+
+    /**
      * Get the framework's base directory path.
      *
      * @since 1.0.0
@@ -99,11 +107,13 @@ final class Loader
      */
     public static function init(): Framework
     {
+        // Make sure our requirements are met (with caching).
+        if (self::$requirements_cache === null) {
+            self::$requirements_cache = self::checkRequirements();
+        }
 
-    // make sure our requirements are met
-        $requirements = self::checkRequirements();
-        if (!$requirements['valid']) {
-            self::displayRequirementErrors($requirements['errors']);
+        if (!self::$requirements_cache['valid']) {
+            self::displayRequirementErrors(self::$requirements_cache['errors']);
             return null;
         }
 

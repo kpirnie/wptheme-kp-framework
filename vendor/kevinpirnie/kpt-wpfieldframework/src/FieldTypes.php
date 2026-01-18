@@ -89,7 +89,7 @@ class FieldTypes
      * @since 1.0.0
      * @var array<string, mixed>
      */
-    private array $field_defaults = array(
+    private const FIELD_DEFAULTS = array(
         'id'          => '',
         'name'        => '',
         'type'        => 'text',
@@ -104,8 +104,17 @@ class FieldTypes
         'readonly'    => false,
         'options'     => array(),
         'attributes'  => array(),
-        'conditional'  => array(),
+        'conditional' => array(),
+        'inline'      => false,
     );
+
+    /**
+     * Cache for prepared field configurations.
+     *
+     * @since 1.0.0
+     * @var array<string, array>
+     */
+    private array $prepared_fields_cache = array();
     /**
      * Check if a field type is supported.
      *
@@ -139,12 +148,8 @@ class FieldTypes
      */
     public function render(array $field, mixed $value = null): string
     {
-        // Merge with defaults.
-        $field = wp_parse_args($field, $this->field_defaults);
-        // Ensure name is set from id if not provided.
-        if (empty($field['name'])) {
-            $field['name'] = $field['id'];
-        }
+        // Prepare field configuration (with caching).
+        $field = $this->prepareField($field);
 
         // Use default value if current value is null.
         if ($value === null && $field['default'] !== '') {
@@ -166,6 +171,43 @@ class FieldTypes
     }
 
     /**
+     * Prepare field configuration with defaults.
+     *
+     * @since  1.0.0
+     * @param  array $field The raw field configuration.
+     * @return array        The prepared field configuration.
+     */
+    private function prepareField(array $field): array
+    {
+        $field_id = $field['id'] ?? '';
+
+        // Return cached preparation if available.
+        if (!empty($field_id) && isset($this->prepared_fields_cache[$field_id])) {
+            $cached = $this->prepared_fields_cache[$field_id];
+            // Restore name if it was overridden.
+            if (!empty($field['name'])) {
+                $cached['name'] = $field['name'];
+            }
+            return $cached;
+        }
+
+        // Merge with defaults.
+        $prepared = wp_parse_args($field, self::FIELD_DEFAULTS);
+
+        // Ensure name is set from id if not provided.
+        if (empty($prepared['name'])) {
+            $prepared['name'] = $prepared['id'];
+        }
+
+        // Cache the prepared field (only if it has an ID).
+        if (!empty($field_id)) {
+            $this->prepared_fields_cache[$field_id] = $prepared;
+        }
+
+        return $prepared;
+    }
+
+    /**
      * Render a field row with label and description.
      *
      * @since  1.0.0
@@ -176,13 +218,7 @@ class FieldTypes
      */
     public function renderRow(array $field, mixed $value = null, string $context = 'meta'): string
     {
-        $field = wp_parse_args($field, $this->field_defaults);
-
-        // Skip row wrapper for certain types.
-        $no_wrapper_types = array( 'hidden', 'heading', 'separator', 'html' );
-        if (in_array($field['type'], $no_wrapper_types, true)) {
-            return $this->render($field, $value);
-        }
+        $field = $this->prepareField($field);
 
         $html = '';
         if ($context === 'options') {
@@ -313,11 +349,11 @@ class FieldTypes
         // Build attribute string.
         $attr_string = '';
         foreach ($attrs as $key => $val) {
-            if ($val === true) {
-                $attr_string .= ' ' . esc_attr($key);
-            } elseif ($val !== false && $val !== null) {
-                $attr_string .= sprintf(' %s="%s"', esc_attr($key), esc_attr($val));
-            }
+            $attr_string .= match (true) {
+                $val === true => ' ' . esc_attr($key),
+                $val !== false && $val !== null => sprintf(' %s="%s"', esc_attr($key), esc_attr($val)),
+                default => '',
+            };
         }
 
         return $attr_string;
@@ -807,16 +843,35 @@ class FieldTypes
      */
     private function renderWysiwyg(array $field, mixed $value): string
     {
-        $settings = wp_parse_args(
-            $field['editor_settings'] ?? array(),
-            array(
-                'textarea_name' => $field['name'],
-                'textarea_rows' => $field['rows'] ?? 10,
-                'media_buttons' => $field['media_buttons'] ?? true,
-                'teeny'         => $field['teeny'] ?? false,
-                'quicktags'     => $field['quicktags'] ?? true,
-            )
+        $default_settings = array(
+            'textarea_name' => $field['name'],
+            'textarea_rows' => $field['rows'] ?? 10,
+            'media_buttons' => $field['media_buttons'] ?? true,
+            'teeny'         => $field['teeny'] ?? false,
+            'quicktags'     => $field['quicktags'] ?? true,
         );
+
+        $allowed_overrides = array(
+            'wpautop',
+            'drag_drop_upload',
+            'tabindex',
+            'editor_height',
+            'editor_class',
+            'tinymce',
+            'quicktags',
+        );
+
+        $custom_settings = array();
+        if (!empty($field['editor_settings']) && is_array($field['editor_settings'])) {
+            foreach ($field['editor_settings'] as $key => $val) {
+                if (in_array($key, $allowed_overrides, true)) {
+                    $custom_settings[$key] = $val;
+                }
+            }
+        }
+
+        $settings = array_merge($default_settings, $custom_settings);
+
         ob_start();
         wp_editor((string) $value, $field['id'], $settings);
         return ob_get_clean();
@@ -1007,18 +1062,34 @@ class FieldTypes
     {
         $post_type = $field['post_type'] ?? 'post';
         $posts_per_page = $field['posts_per_page'] ?? -1;
-        $posts = get_posts(
-            array(
-                'post_type'      => $post_type,
-                'posts_per_page' => $posts_per_page,
-                'post_status'    => 'publish',
-                'orderby'        => 'title',
-                'order'          => 'ASC',
-            )
-        );
-        $field['options'] = array();
-        foreach ($posts as $post) {
-            $field['options'][ $post->ID ] = $post->post_title;
+        $cache_key = 'post_select_' . md5($post_type . '_' . $posts_per_page);
+
+        // Check for cached options.
+        $cached_options = wp_cache_get($cache_key, 'kp_wsf_field_options');
+
+        if ($cached_options !== false) {
+            $field['options'] = $cached_options;
+        } else {
+            $posts = get_posts(
+                array(
+                    'post_type'      => $post_type,
+                    'posts_per_page' => $posts_per_page,
+                    'post_status'    => 'publish',
+                    'orderby'        => 'title',
+                    'order'          => 'ASC',
+                    'no_found_rows'  => true,
+                    'update_post_meta_cache' => false,
+                    'update_post_term_cache' => false,
+                )
+            );
+
+            $field['options'] = array();
+            foreach ($posts as $post) {
+                $field['options'][$post->ID] = $post->post_title;
+            }
+
+            // Cache for 5 minutes.
+            wp_cache_set($cache_key, $field['options'], 'kp_wsf_field_options', 300);
         }
 
         return $this->renderSelect($field, $value);
@@ -1035,17 +1106,32 @@ class FieldTypes
     private function renderTermSelect(array $field, mixed $value): string
     {
         $taxonomy = $field['taxonomy'] ?? 'category';
-        $terms = get_terms(
-            array(
-                'taxonomy'   => $taxonomy,
-                'hide_empty' => $field['hide_empty'] ?? false,
-            )
-        );
-        $field['options'] = array();
-        if (! is_wp_error($terms)) {
-            foreach ($terms as $term) {
-                $field['options'][ $term->term_id ] = $term->name;
+        $hide_empty = $field['hide_empty'] ?? false;
+        $cache_key = 'term_select_' . md5($taxonomy . '_' . ($hide_empty ? '1' : '0'));
+
+        // Check for cached options.
+        $cached_options = wp_cache_get($cache_key, 'kp_wsf_field_options');
+
+        if ($cached_options !== false) {
+            $field['options'] = $cached_options;
+        } else {
+            $terms = get_terms(
+                array(
+                    'taxonomy'   => $taxonomy,
+                    'hide_empty' => $hide_empty,
+                    'update_term_meta_cache' => false,
+                )
+            );
+
+            $field['options'] = array();
+            if (!is_wp_error($terms)) {
+                foreach ($terms as $term) {
+                    $field['options'][$term->term_id] = $term->name;
+                }
             }
+
+            // Cache for 5 minutes.
+            wp_cache_set($cache_key, $field['options'], 'kp_wsf_field_options', 300);
         }
 
         return $this->renderSelect($field, $value);
@@ -1062,18 +1148,33 @@ class FieldTypes
     private function renderUserSelect(array $field, mixed $value): string
     {
         $role = $field['role'] ?? '';
-        $args = array(
-            'orderby' => 'display_name',
-            'order' => 'ASC',
-        );
-        if (! empty($role)) {
-            $args['role'] = $role;
-        }
+        $cache_key = 'user_select_' . md5($role);
 
-        $users = get_users($args);
-        $field['options'] = array();
-        foreach ($users as $user) {
-            $field['options'][ $user->ID ] = $user->display_name;
+        // Check for cached options.
+        $cached_options = wp_cache_get($cache_key, 'kp_wsf_field_options');
+
+        if ($cached_options !== false) {
+            $field['options'] = $cached_options;
+        } else {
+            $args = array(
+                'orderby' => 'display_name',
+                'order'   => 'ASC',
+                'fields'  => array('ID', 'display_name'),
+            );
+
+            if (!empty($role)) {
+                $args['role'] = $role;
+            }
+
+            $users = get_users($args);
+
+            $field['options'] = array();
+            foreach ($users as $user) {
+                $field['options'][$user->ID] = $user->display_name;
+            }
+
+            // Cache for 5 minutes.
+            wp_cache_set($cache_key, $field['options'], 'kp_wsf_field_options', 300);
         }
 
         return $this->renderSelect($field, $value);

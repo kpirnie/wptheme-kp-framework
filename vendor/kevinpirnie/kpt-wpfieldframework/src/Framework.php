@@ -102,6 +102,20 @@ final class Framework
      */
     private bool $initialized = false;
     /**
+     * Export/Import handler instance.
+     *
+     * @since 1.0.0
+     * @var ExportImport|null
+     */
+    private ?ExportImport $export_import = null;
+    /**
+     * Map of menu slugs to options pages.
+     *
+     * @since 1.0.0
+     * @var array<string, OptionsPage>
+     */
+    private array $options_pages_by_slug = [];
+    /**
      * Private constructor to enforce singleton.
      *
      * @since 1.0.0
@@ -174,6 +188,7 @@ final class Framework
         // Initialize core components.
         $this->field_types = new FieldTypes();
         $this->storage = new Storage();
+        $this->export_import = new ExportImport($this->storage);
         $this->block_generator = new BlockGenerator($this->field_types);
         // Register WordPress hooks.
         $this->registerHooks();
@@ -189,27 +204,42 @@ final class Framework
      */
     private function registerHooks(): void
     {
-        // Enqueue admin assets.
-        add_action('admin_enqueue_scripts', array( $this, 'enqueueAdminAssets' ));
-        // Register meta boxes.
-        add_action('add_meta_boxes', array( $this, 'registerMetaBoxes' ));
-        // Save meta box data.
-        add_action('save_post', array( $this, 'saveMetaBoxes' ), 10, 2);
-        // Save user meta.
-        add_action('personal_options_update', array( $this, 'saveUserMeta' ));
-        add_action('edit_user_profile_update', array( $this, 'saveUserMeta' ));
-        // Register options pages.
-        add_action('admin_menu', array( $this, 'registerOptionsPages' ));
-        // Register settings.
-        add_action('admin_init', array( $this, 'registerSettings' ));
-        // Initialize blocks.
-        add_action('init', array( $this, 'registerBlocks' ));
-        // Add user profile fields.
-        add_action('show_user_profile', array( $this, 'renderUserMetaFields' ));
-        add_action('edit_user_profile', array( $this, 'renderUserMetaFields' ));
-        // Nav menu item custom fields.
-        add_action('wp_nav_menu_item_custom_fields', array( $this, 'renderNavMenuFields' ), 10, 5);
-        add_action('wp_update_nav_menu_item', array( $this, 'saveNavMenuFields' ), 10, 3);
+        // Only register admin hooks when in admin context.
+        if (is_admin()) {
+            // Enqueue admin assets.
+            add_action('admin_enqueue_scripts', array($this, 'enqueueAdminAssets'));
+
+            // Register meta boxes.
+            add_action('add_meta_boxes', array($this, 'registerMetaBoxes'));
+
+            // Save meta box data.
+            add_action('save_post', array($this, 'saveMetaBoxes'), 10, 2);
+
+            // Save user meta.
+            add_action('personal_options_update', array($this, 'saveUserMeta'));
+            add_action('edit_user_profile_update', array($this, 'saveUserMeta'));
+
+            // Register options pages.
+            add_action('admin_menu', array($this, 'registerOptionsPages'));
+
+            // Register settings.
+            add_action('admin_init', array($this, 'registerSettings'));
+
+            // Add user profile fields.
+            add_action('show_user_profile', array($this, 'renderUserMetaFields'));
+            add_action('edit_user_profile', array($this, 'renderUserMetaFields'));
+
+            // Nav menu item custom fields.
+            add_action('wp_nav_menu_item_custom_fields', array($this, 'renderNavMenuFields'), 10, 5);
+            add_action('wp_update_nav_menu_item', array($this, 'saveNavMenuFields'), 10, 3);
+
+            // Handle export/import AJAX actions.
+            add_action('wp_ajax_kp_wsf_export_settings', array($this, 'ajaxExportSettings'));
+            add_action('wp_ajax_kp_wsf_import_settings', array($this, 'ajaxImportSettings'));
+        }
+
+        // Initialize blocks (needed on both admin and frontend for rendering).
+        add_action('init', array($this, 'registerBlocks'));
     }
 
     /**
@@ -261,35 +291,65 @@ final class Framework
     public function enqueueAdminAssets(string $hook_suffix): void
     {
         // Only load on relevant admin pages.
-        $dominated_screens = array( 'post.php', 'post-new.php', 'user-edit.php', 'profile.php', 'nav-menus.php' );
+        $dominated_screens = array('post.php', 'post-new.php', 'user-edit.php', 'profile.php', 'nav-menus.php');
         $is_options_page = $this->isFrameworkOptionsPage($hook_suffix);
         if (! in_array($hook_suffix, $dominated_screens, true) && ! $is_options_page) {
             return;
         }
 
-        // Enqueue WordPress media scripts for file/image uploads.
-        wp_enqueue_media();
-        // Enqueue WordPress link dialog.
-        wp_enqueue_script('wplink');
-        wp_enqueue_style('editor-buttons');
-        // Enqueue WordPress color picker.
-        wp_enqueue_style('wp-color-picker');
-        wp_enqueue_script('wp-color-picker');
-        // Enqueue WordPress date picker.
-        wp_enqueue_script('jquery-ui-datepicker');
-        wp_enqueue_style('jquery-ui-datepicker-style', '//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css', array(), '1.13.2');
-        // Enqueue jQuery Select2
-        wp_enqueue_style('select2-css', 'https://cdn.jsdelivr.net/npm/select2@latest/dist/css/select2.min.css', array(), '4.1.0');
-        wp_enqueue_script('select2-js', 'https://cdn.jsdelivr.net/npm/select2@latest/dist/js/select2.min.js', array( 'jquery' ), '4.1.0', true);
-        // Enqueue code editor if available (WP 4.9+).
-        if (function_exists('wp_enqueue_code_editor')) {
-            wp_enqueue_code_editor(array( 'type' => 'text/html' ));
-        }
+        // Determine which field types are present to conditionally load assets.
+        $field_types_present = $this->getFieldTypesForCurrentScreen($hook_suffix);
 
-        // Framework admin styles.
+        // Always enqueue core framework assets.
         $style_path = $this->assets_path . '/css/wsf-admin.css';
         if (file_exists($style_path)) {
             wp_enqueue_style('kp-wsf-admin', $this->assets_url . '/css/wsf-admin.css', array(), self::VERSION);
+        }
+
+        $script_deps = array('jquery', 'jquery-ui-sortable');
+
+        // Conditionally enqueue media scripts for file/image/gallery uploads.
+        $media_types = array('image', 'file', 'gallery');
+        if (array_intersect($media_types, $field_types_present)) {
+            wp_enqueue_media();
+        }
+
+        // Conditionally enqueue link dialog for link fields.
+        if (in_array('link', $field_types_present, true)) {
+            wp_enqueue_script('wplink');
+            wp_enqueue_style('editor-buttons');
+        }
+
+        // Conditionally enqueue color picker.
+        if (in_array('color', $field_types_present, true)) {
+            wp_enqueue_style('wp-color-picker');
+            wp_enqueue_script('wp-color-picker');
+            $script_deps[] = 'wp-color-picker';
+        }
+
+        // Conditionally enqueue date picker.
+        $date_types = array('date', 'datetime');
+        if (array_intersect($date_types, $field_types_present)) {
+            wp_enqueue_script('jquery-ui-datepicker');
+            wp_enqueue_style('jquery-ui-datepicker-style', '//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css', array(), '1.13.2');
+            $script_deps[] = 'jquery-ui-datepicker';
+        }
+
+        // Conditionally enqueue Select2 for multiselect fields.
+        if (in_array('multiselect', $field_types_present, true)) {
+            wp_enqueue_style('select2-css', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', array(), '4.1.0');
+            wp_enqueue_script('select2-js', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', array('jquery'), '4.1.0', true);
+        }
+
+        // Conditionally enqueue code editor.
+        if (in_array('code', $field_types_present, true) && function_exists('wp_enqueue_code_editor')) {
+            wp_enqueue_code_editor(array('type' => 'text/html'));
+        }
+
+        // Framework admin script.
+        $script_path = $this->assets_path . '/js/wsf-admin.js';
+        if (file_exists($script_path)) {
+            wp_enqueue_script('kp-wsf-admin', $this->assets_url . '/js/wsf-admin.js', $script_deps, self::VERSION, true);
         }
 
         // Framework admin script.
@@ -307,6 +367,13 @@ final class Framework
                         'confirmDelete' => __('Are you sure you want to remove this item?', 'kp-wsf'),
                         'mediaTitle'    => __('Select or Upload', 'kp-wsf'),
                         'mediaButton'   => __('Use this file', 'kp-wsf'),
+                        'exporting'      => __('Exporting...', 'kp-wsf'),
+                        'importing'      => __('Importing...', 'kp-wsf'),
+                        'exportError'    => __('Export failed. Please try again.', 'kp-wsf'),
+                        'importError'    => __('Import failed. Please try again.', 'kp-wsf'),
+                        'confirmImport'  => __('This will overwrite your current settings. Continue?', 'kp-wsf'),
+                        'noFileSelected' => __('Please select a file.', 'kp-wsf'),
+                        'fileReadError'  => __('Failed to read file.', 'kp-wsf'),
                     ),
                 )
             );
@@ -332,6 +399,126 @@ final class Framework
     }
 
     /**
+     * Get field types present on the current screen.
+     *
+     * @since  1.0.0
+     * @param  string $hook_suffix The current admin page hook suffix.
+     * @return array               Array of field type strings.
+     */
+    private function getFieldTypesForCurrentScreen(string $hook_suffix): array
+    {
+        $field_types = array();
+
+        // Check if on an options page.
+        foreach ($this->options_pages as $page) {
+            if (strpos($hook_suffix, $page->getMenuSlug()) !== false) {
+                $fields = $page->getAllFields();
+                foreach ($fields as $field) {
+                    $type = $field['type'] ?? 'text';
+                    $field_types[] = $type;
+
+                    // Check repeater sub-fields.
+                    if ($type === 'repeater' && !empty($field['fields'])) {
+                        foreach ($field['fields'] as $sub_field) {
+                            $field_types[] = $sub_field['type'] ?? 'text';
+                        }
+                    }
+
+                    // Check group sub-fields.
+                    if ($type === 'group' && !empty($field['fields'])) {
+                        foreach ($field['fields'] as $sub_field) {
+                            $field_types[] = $sub_field['type'] ?? 'text';
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        // Check meta boxes for post screens.
+        if (in_array($hook_suffix, array('post.php', 'post-new.php'), true)) {
+            global $post_type;
+            foreach ($this->meta_boxes as $meta_box) {
+                if (in_array($post_type, $meta_box->getPostTypes(), true)) {
+                    foreach ($meta_box->getFields() as $field) {
+                        $type = $field['type'] ?? 'text';
+                        $field_types[] = $type;
+
+                        // Check repeater sub-fields.
+                        if ($type === 'repeater' && !empty($field['fields'])) {
+                            foreach ($field['fields'] as $sub_field) {
+                                $field_types[] = $sub_field['type'] ?? 'text';
+                            }
+                        }
+
+                        // Check group sub-fields.
+                        if ($type === 'group' && !empty($field['fields'])) {
+                            foreach ($field['fields'] as $sub_field) {
+                                $field_types[] = $sub_field['type'] ?? 'text';
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check user meta boxes for user screens.
+        if (in_array($hook_suffix, array('user-edit.php', 'profile.php'), true)) {
+            foreach ($this->meta_boxes as $meta_box) {
+                if ($meta_box->isUserMeta()) {
+                    foreach ($meta_box->getFields() as $field) {
+                        $type = $field['type'] ?? 'text';
+                        $field_types[] = $type;
+
+                        // Check repeater sub-fields.
+                        if ($type === 'repeater' && !empty($field['fields'])) {
+                            foreach ($field['fields'] as $sub_field) {
+                                $field_types[] = $sub_field['type'] ?? 'text';
+                            }
+                        }
+
+                        // Check group sub-fields.
+                        if ($type === 'group' && !empty($field['fields'])) {
+                            foreach ($field['fields'] as $sub_field) {
+                                $field_types[] = $sub_field['type'] ?? 'text';
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check nav menu meta boxes.
+        if ($hook_suffix === 'nav-menus.php') {
+            foreach ($this->meta_boxes as $meta_box) {
+                if ($meta_box->isNavMenu()) {
+                    foreach ($meta_box->getFields() as $field) {
+                        $type = $field['type'] ?? 'text';
+                        $field_types[] = $type;
+
+                        // Check repeater sub-fields.
+                        if ($type === 'repeater' && !empty($field['fields'])) {
+                            foreach ($field['fields'] as $sub_field) {
+                                $field_types[] = $sub_field['type'] ?? 'text';
+                            }
+                        }
+
+                        // Check group sub-fields.
+                        if ($type === 'group' && !empty($field['fields'])) {
+                            foreach ($field['fields'] as $sub_field) {
+                                $field_types[] = $sub_field['type'] ?? 'text';
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Return unique field types.
+        return array_unique($field_types);
+    }
+
+    /**
      * Create and register an options page.
      *
      * @since  1.0.0
@@ -342,6 +529,7 @@ final class Framework
     {
         $page = new OptionsPage($config, $this->field_types, $this->storage);
         $this->options_pages[ $page->getMenuSlug() ] = $page;
+        $this->options_pages_by_slug[$page->getMenuSlug()] = $page;
         return $page;
     }
 
@@ -602,5 +790,166 @@ final class Framework
     public function isInitialized(): bool
     {
         return $this->initialized;
+    }
+
+    /**
+     * Get the export/import handler.
+     *
+     * @since  1.0.0
+     * @return ExportImport The export/import instance.
+     */
+    public function getExportImport(): ExportImport
+    {
+        return $this->export_import;
+    }
+
+    /**
+     * Get all registered option keys.
+     *
+     * @since  1.0.0
+     * @return array Array of option keys.
+     */
+    public function getRegisteredOptionKeys(): array
+    {
+        $keys = [];
+        foreach ($this->options_pages as $page) {
+            $key = $page->getOptionKey();
+            if (!in_array($key, $keys, true)) {
+                $keys[] = $key;
+            }
+        }
+        return $keys;
+    }
+
+    /**
+     * Get options page by menu slug.
+     *
+     * @since  1.0.0
+     * @param  string $menu_slug The menu slug.
+     * @return OptionsPage|null  The options page or null.
+     */
+    public function getOptionsPageBySlug(string $menu_slug): ?OptionsPage
+    {
+        return $this->options_pages_by_slug[$menu_slug] ?? null;
+    }
+
+    /**
+     * AJAX handler for exporting settings.
+     *
+     * @since  1.0.0
+     * @return void
+     */
+    public function ajaxExportSettings(): void
+    {
+        if (!check_ajax_referer('kp_wsf_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Security check failed.', 'kp-wsf')]);
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Permission denied.', 'kp-wsf')]);
+        }
+
+        check_admin_referer('kp_wsf_nonce', 'nonce');
+
+        $menu_slug = isset($_POST['menu_slug']) ? sanitize_key($_POST['menu_slug']) : '';
+
+        if (!empty($menu_slug)) {
+            // Export specific options page with defaults.
+            $page = $this->getOptionsPageBySlug($menu_slug);
+            if ($page) {
+                $json = $this->export_import->exportWithDefaults([$page]);
+                $filename = sanitize_file_name($menu_slug) . '-settings-' . date('Y-m-d-His') . '.json';
+            } else {
+                wp_send_json_error(['message' => __('Options page not found.', 'kp-wsf')]);
+                return;
+            }
+        } else {
+            // Export all options pages with defaults.
+            $json = $this->export_import->exportWithDefaults(array_values($this->options_pages));
+            $filename = 'all-settings-' . date('Y-m-d-His') . '.json';
+        }
+
+        wp_send_json_success([
+            'json'     => $json,
+            'filename' => $filename,
+        ]);
+    }
+
+    /**
+     * AJAX handler for importing settings.
+     *
+     * @since  1.0.0
+     * @return void
+     */
+    public function ajaxImportSettings(): void
+    {
+        if (!check_ajax_referer('kp_wsf_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Security check failed.', 'kp-wsf')]);
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Permission denied.', 'kp-wsf')]);
+        }
+
+        check_admin_referer('kp_wsf_nonce', 'nonce');
+
+        // Limit maximum import size to 1MB.
+        $max_import_size = apply_filters('kp_wsf_max_import_size', 1048576);
+
+        $json = isset($_POST['json']) ? wp_unslash($_POST['json']) : '';
+        $menu_slug = isset($_POST['menu_slug']) ? sanitize_key($_POST['menu_slug']) : '';
+
+        if (empty($json)) {
+            wp_send_json_error(['message' => __('No data provided.', 'kp-wsf')]);
+        }
+
+        if (strlen($json) > $max_import_size) {
+            wp_send_json_error([
+                'message' => sprintf(
+                    __('Import data exceeds maximum allowed size of %s.', 'kp-wsf'),
+                    size_format($max_import_size)
+                )
+            ]);
+        }
+
+        // Determine allowed options.
+        if (!empty($menu_slug)) {
+            $page = $this->getOptionsPageBySlug($menu_slug);
+            if ($page) {
+                $allowed_options = [$page->getOptionKey()];
+            } else {
+                wp_send_json_error(['message' => __('Options page not found.', 'kp-wsf')]);
+                return;
+            }
+        } else {
+            $allowed_options = $this->getRegisteredOptionKeys();
+        }
+
+        // Build field definitions for validation.
+        $field_definitions = [];
+        foreach ($this->options_pages as $page) {
+            $option_key = $page->getOptionKey();
+            $fields = $page->getAllFields();
+            $field_definitions[$option_key] = $fields;
+        }
+
+        $result = $this->export_import->import($json, $allowed_options, $field_definitions);
+
+        if ($result['success']) {
+            wp_send_json_success([
+                'message'  => sprintf(
+                    __('Successfully imported %d setting group(s).', 'kp-wsf'),
+                    count($result['imported'])
+                ),
+                'imported' => $result['imported'],
+                'errors'   => $result['errors'],
+            ]);
+        } else {
+            wp_send_json_error([
+                'message' => __('Import failed.', 'kp-wsf'),
+                'errors'  => $result['errors'],
+            ]);
+        }
+        
     }
 }

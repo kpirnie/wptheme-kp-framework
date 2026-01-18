@@ -89,11 +89,132 @@ if( ! class_exists( 'KPF_Settings' ) ) {
                     'themeframework' => $this -> add_theme_framework_settings(),
                     'images' => $this -> add_image_settings(),
                     'content' => $this -> add_content_settings(),
+                    'performance' => $this -> add_performance_settings(),
+                    'smtp' => $this -> add_smtp_settings(),
+                    'cookienotice' => $this -> add_cookie_notice_settings(),
                 ],
                 'save_button' => __( 'Save Theme Settings', 'kpf'),
-                'footer_text' => '<p class="alignright">Copyright &copy; ' . date('Y') . ' <a href="https://kevinpirnie.com" target="_blank">Kevin Pirnie</a></p>',
+                'footer_text' => __( '<p class="alignright">Copyright &copy; ' . date('Y') . ' <a href="https://kevinpirnie.com" target="_blank">Kevin Pirnie</a></p>', 'kpf'),
+                'show_export_import' => true,
             ]);
 
+        }
+
+        /**
+         * add_theme_framework_settings
+         * 
+         * Creates the themes frameworks settings
+         * 
+         * @author Kevin Pirnie <iam@kevinpirnie.com>
+         * @copyright 2025 Kevin Pirnie
+         * 
+         * @since 1.0.1
+         * @package KP Theme Framework
+         * @access private
+         * 
+         * @return array Returns the sections fields
+         */
+        private function add_theme_framework_settings(): array {
+
+            // return the settings array
+            return [
+                'title' => __('Framework', 'kpf'),
+                'sections' => [
+                    'css_framework' => [
+                        'fields' => [ // framework selector, framework version, load from cdn
+                            [
+                                'id' => 'kpf_fw_name',
+                                'type' => 'select',
+                                'label' => __('CSS Framework', 'kpf'),
+                                'description' => __('Picking a framework here will automatically load in everything needed for you to utilize it.<br /><strong>NOTE: </strong>Once you make a selection, you will be able to choose the version to utilize, and whether or not you want to load it from the CDN.', 'kpf'),
+                                'options' => [
+                                    '0' => __('None', 'kpf'),
+                                    '1' => __('Bootstrap', 'kpf'),
+                                    '2' => __('UIKit', 'kpf'),
+                                    '3' => __('Tailwind', 'kpf'),
+                                    '4' => __('Foundation', 'kpf'),
+                                    '5' => __('Bulma', 'kpf'),
+                                    '6' => __('Materialize', 'kpf'),
+                                ],
+                                'default' => '0',
+                            ],
+
+                            
+                            [
+                                'id' => 'kpf_fw_cdn',
+                                'label' => __('Load from CDN?', 'kpf'),
+                                'type' => 'switch',
+                                'description' => __('Should we load the framework from the CDN? (cdn.jsdelivr.net)', 'kpf'),
+                                'on_label'  => __('Yes', 'kpf'),
+                                'off_label' => __('No', 'kpf'),
+                                'default' => true,
+                                'conditional' => [
+                                    'field' => 'kpf_fw_name',
+                                    'value' => ['1', '2', '4', '5', '6'],
+                                    'condition' => 'IN',
+                                ],
+                            ],
+                            [
+                                'id' => 'kpf_fw_f_note',
+                                'type' => 'message',
+                                'message_type' => 'warning', // info, success, warning, error
+                                'content' => __( 'Tailwind plays a bit differently, you will need to utilize it\'s build processes in order to use this framework.<br />See here for more information: <a href="https://tailwindcss.com/docs/installation/using-vite" target="_blank">https://tailwindcss.com/docs/installation/using-vite</a>', 'kpf'),
+                                'conditional' => [
+                                    'field' => 'kpf_fw_name',
+                                    'value' => '3',
+                                    'condition' => '==',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ];
+        }
+
+        /**
+         * add_smtp_settings
+         * 
+         * Creates SMTP configuration options
+         * 
+         * @author Kevin Pirnie <iam@kevinpirnie.com>
+         * @copyright 2025 Kevin Pirnie
+         * 
+         * @since 1.0.1
+         * @package KP Theme Framework
+         * @access private
+         * 
+         * @return array Returns the sections fields
+         */
+        private function add_smtp_settings( ): array {
+
+            // return the settings array
+            return [
+                'title' => __('SMTP', 'kpf'),
+
+            ];
+        }
+
+        /**
+         * add_cookie_notice_settings
+         * 
+         * Creates a configurable cookie notice
+         * 
+         * @author Kevin Pirnie <iam@kevinpirnie.com>
+         * @copyright 2025 Kevin Pirnie
+         * 
+         * @since 1.0.1
+         * @package KP Theme Framework
+         * @access private
+         * 
+         * @return array Returns the sections fields
+         */
+        private function add_cookie_notice_settings( ): array {
+
+            // return the settings array
+            return [
+                'title' => __('Cookie Notice', 'kpf'),
+
+            ];
         }
 
         /**
@@ -117,7 +238,6 @@ if( ! class_exists( 'KPF_Settings' ) ) {
                 'title' => __('Security', 'kpf'),
                 'sections' => [
                     'security' => [
-                        'title'  => __('', 'kpf'),
                         'fields' => [
                             [
                                 'id'    => 'kpf_wp_rest',
@@ -212,29 +332,6 @@ if( ! class_exists( 'KPF_Settings' ) ) {
         }
 
         /**
-         * add_theme_framework_settings
-         * 
-         * Creates the themes frameworks settings
-         * 
-         * @author Kevin Pirnie <iam@kevinpirnie.com>
-         * @copyright 2025 Kevin Pirnie
-         * 
-         * @since 1.0.1
-         * @package KP Theme Framework
-         * @access private
-         * 
-         * @return array Returns the sections fields
-         */
-        private function add_theme_framework_settings(): array {
-
-            // return the settings array
-            return [
-                'title' => __('CSS Framework', 'kpf'),
-
-            ];
-        }
-
-        /**
          * add_image_settings
          * 
          * Create the imagery settings tab
@@ -255,7 +352,6 @@ if( ! class_exists( 'KPF_Settings' ) ) {
                 'title' => __('Imagery', 'kpf'),
                 'sections' => [
                     'imagery' => [
-                        'title'  => __('', 'kpf'),
                         'fields' => [
                             [
                                 'id'    => 'kpf_allow_svg',
@@ -455,10 +551,73 @@ if( ! class_exists( 'KPF_Settings' ) ) {
             // return the array of the fields
             return [
                 'title' => __('Performance', 'kpf'),
-                'section' => [
+                'sections' => [
                     'performance' => [
                         'fields' => [
-                            [],
+                            [
+                                'id' => 'kpf_perf_remove_qs',
+                                'type' => 'switch',
+                                'label' => __('Remove Querystrings?', 'kpf'),
+                                'description' => __('This will attempt to remove querystrings from all static resources.', 'kpf'),
+                                'on_label'  => __('Yes', 'kpf'),
+                                'off_label' => __('No', 'kpf'),
+                                'default' => false,
+                            ],
+                            [
+                                'id' => 'kpf_perf_force_js_footer',
+                                'type' => 'switch',
+                                'label' => __('JS to Footer?', 'kpf'),
+                                'description' => __('This will attempt to force all javascript resrouces to load in the site footer.', 'kpf'),
+                                'on_label'  => __('Yes', 'kpf'),
+                                'off_label' => __('No', 'kpf'),
+                                'default' => false,
+                            ],
+                            [
+                                'id' => 'kpf_perf_defer_js',
+                                'type' => 'switch',
+                                'label' => __('Defer JS?', 'kpf'),
+                                'description' => __('This will attempt to mark all javascript resources as defered.', 'kpf'),
+                                'on_label'  => __('Yes', 'kpf'),
+                                'off_label' => __('No', 'kpf'),
+                                'default' => false,
+                            ],
+                            [
+                                'id' => 'kpf_perf_apply_pre',
+                                'type' => 'switch',
+                                'label' => __('Apply the Pre\'s?', 'kpf'),
+                                'sublabel' => __('Pre-Load, Pre-Render, and Pre-Fetch', 'kpf'),
+                                'description' => __('This will attempt inject pre-load, pre-render, and pre-fetch meta-tags for all external resources.', 'kpf'),
+                                'on_label'  => __('Yes', 'kpf'),
+                                'off_label' => __('No', 'kpf'),
+                                'default' => false,
+                            ],
+                            [
+                                'id' => 'kpf_perf_apply_ip',
+                                'type' => 'switch',
+                                'label' => __('Apply instant.page?', 'kpf'),
+                                'description' => __('This will attempt to inject the instant.page library. See here for more info: <a href="https://instant.page/" target="_blank">https://instant.page/</a>', 'kpf'),
+                                'on_label'  => __('Yes', 'kpf'),
+                                'off_label' => __('No', 'kpf'),
+                                'default' => false,
+                            ],
+                            [
+                                'id' => 'kpf_perf_slow_hb',
+                                'type' => 'switch',
+                                'label' => __('Slow Down Heartbeat?', 'kpf'),
+                                'description' => __('This will attempt to slow down WordPress\'s heartbeat. This will change it from the default 15 seconds to 300 seconds.', 'kpf'),
+                                'on_label'  => __('Yes', 'kpf'),
+                                'off_label' => __('No', 'kpf'),
+                                'default' => false,
+                            ],
+                            [
+                                'id' => 'kpf_perf_rmove_emojis',
+                                'type' => 'switch',
+                                'label' => __('Remove Emojis?', 'kpf'),
+                                'description' => __('This will attempt to remove all WordPress default emoji scripts and stylesheets.', 'kpf'),
+                                'on_label'  => __('Yes', 'kpf'),
+                                'off_label' => __('No', 'kpf'),
+                                'default' => false,
+                            ],
                         ],
                     ]
                 ],

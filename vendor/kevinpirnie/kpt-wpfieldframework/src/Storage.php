@@ -29,29 +29,52 @@ defined('ABSPATH') || exit;
  */
 class Storage
 {
+    
     /**
-     * Cache for retrieved values.
+     * Cache for retrieved values (request-scoped).
      *
      * @since 1.0.0
      * @var array
      */
-    private array $cache = array();
+    private array $cache = [];
+
     /**
      * Whether to use caching.
      *
      * @since 1.0.0
      * @var bool
      */
-    private bool $use_cache = true;
+    private bool $use_cache;
+
+    /**
+     * Cache group for WordPress object cache.
+     *
+     * @since 1.0.0
+     * @var string
+     */
+    private string $cache_group = 'kp_wsf';
+
+    /**
+     * Whether to use WordPress object cache.
+     *
+     * @since 1.0.0
+     * @var bool
+     */
+    private bool $use_object_cache;
+
     /**
      * Constructor.
      *
      * @since 1.0.0
-     * @param bool $use_cache Whether to enable caching.
+     * @param bool $use_cache        Whether to enable request-scoped caching.
+     * @param bool $use_object_cache Whether to enable WordPress object cache.
      */
-    public function __construct(bool $use_cache = true)
-    {
+    public function __construct(
+        bool $use_cache = true,
+        bool $use_object_cache = true
+    ) {
         $this->use_cache = $use_cache;
+        $this->use_object_cache = $use_object_cache && wp_using_ext_object_cache();
     }
 
     // =========================================================================
@@ -69,13 +92,31 @@ class Storage
     public function getOption(string $option, mixed $default = null): mixed
     {
         $cache_key = 'option_' . $option;
-        if ($this->use_cache && isset($this->cache[ $cache_key ])) {
-            return $this->cache[ $cache_key ];
+
+        // Check request-scoped cache first.
+        if ($this->use_cache && isset($this->cache[$cache_key])) {
+            return $this->cache[$cache_key];
+        }
+
+        // Check WordPress object cache.
+        if ($this->use_object_cache) {
+            $value = wp_cache_get($cache_key, $this->cache_group);
+            if ($value !== false) {
+                $this->cache[$cache_key] = $value;
+                return $value;
+            }
         }
 
         $value = get_option($option, $default);
+
+        // Store in request-scoped cache.
         if ($this->use_cache) {
-            $this->cache[ $cache_key ] = $value;
+            $this->cache[$cache_key] = $value;
+        }
+
+        // Store in WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_set($cache_key, $value, $this->cache_group);
         }
 
         return $value;
@@ -93,9 +134,16 @@ class Storage
     public function updateOption(string $option, mixed $value, bool $autoload = true): bool
     {
         $result = update_option($option, $value, $autoload);
-        // Update cache.
+        $cache_key = 'option_' . $option;
+
+        // Update request-scoped cache.
         if ($this->use_cache) {
-            $this->cache[ 'option_' . $option ] = $value;
+            $this->cache[$cache_key] = $value;
+        }
+
+        // Update WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_set($cache_key, $value, $this->cache_group);
         }
 
         return $result;
@@ -111,9 +159,16 @@ class Storage
     public function deleteOption(string $option): bool
     {
         $result = delete_option($option);
-        // Clear cache.
+        $cache_key = 'option_' . $option;
+
+        // Clear request-scoped cache.
         if ($this->use_cache) {
-            unset($this->cache[ 'option_' . $option ]);
+            unset($this->cache[$cache_key]);
+        }
+
+        // Clear WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_delete($cache_key, $this->cache_group);
         }
 
         return $result;
@@ -193,18 +248,36 @@ class Storage
     public function getMeta(int $post_id, string $meta_key, mixed $default = null): mixed
     {
         $cache_key = 'post_meta_' . $post_id . '_' . $meta_key;
-        if ($this->use_cache && isset($this->cache[ $cache_key ])) {
-            return $this->cache[ $cache_key ];
+
+        // Check request-scoped cache first.
+        if ($this->use_cache && isset($this->cache[$cache_key])) {
+            return $this->cache[$cache_key];
+        }
+
+        // Check WordPress object cache.
+        if ($this->use_object_cache) {
+            $value = wp_cache_get($cache_key, $this->cache_group);
+            if ($value !== false) {
+                $this->cache[$cache_key] = $value;
+                return $value;
+            }
         }
 
         $value = get_post_meta($post_id, $meta_key, true);
+
         // Return default if empty.
         if ($value === '' || $value === false) {
             $value = $default;
         }
 
+        // Store in request-scoped cache.
         if ($this->use_cache) {
-            $this->cache[ $cache_key ] = $value;
+            $this->cache[$cache_key] = $value;
+        }
+
+        // Store in WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_set($cache_key, $value, $this->cache_group);
         }
 
         return $value;
@@ -222,9 +295,16 @@ class Storage
     public function updateMeta(int $post_id, string $meta_key, mixed $value): bool
     {
         $result = update_post_meta($post_id, $meta_key, $value);
-        // Update cache.
+        $cache_key = 'post_meta_' . $post_id . '_' . $meta_key;
+
+        // Update request-scoped cache.
         if ($this->use_cache) {
-            $this->cache[ 'post_meta_' . $post_id . '_' . $meta_key ] = $value;
+            $this->cache[$cache_key] = $value;
+        }
+
+        // Update WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_set($cache_key, $value, $this->cache_group);
         }
 
         return $result !== false;
@@ -241,9 +321,16 @@ class Storage
     public function deleteMeta(int $post_id, string $meta_key): bool
     {
         $result = delete_post_meta($post_id, $meta_key);
-        // Clear cache.
+        $cache_key = 'post_meta_' . $post_id . '_' . $meta_key;
+
+        // Clear request-scoped cache.
         if ($this->use_cache) {
-            unset($this->cache[ 'post_meta_' . $post_id . '_' . $meta_key ]);
+            unset($this->cache[$cache_key]);
+        }
+
+        // Clear WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_delete($cache_key, $this->cache_group);
         }
 
         return $result;
@@ -290,18 +377,36 @@ class Storage
     public function getUserMeta(int $user_id, string $meta_key, mixed $default = null): mixed
     {
         $cache_key = 'user_meta_' . $user_id . '_' . $meta_key;
-        if ($this->use_cache && isset($this->cache[ $cache_key ])) {
-            return $this->cache[ $cache_key ];
+
+        // Check request-scoped cache first.
+        if ($this->use_cache && isset($this->cache[$cache_key])) {
+            return $this->cache[$cache_key];
+        }
+
+        // Check WordPress object cache.
+        if ($this->use_object_cache) {
+            $value = wp_cache_get($cache_key, $this->cache_group);
+            if ($value !== false) {
+                $this->cache[$cache_key] = $value;
+                return $value;
+            }
         }
 
         $value = get_user_meta($user_id, $meta_key, true);
+
         // Return default if empty.
         if ($value === '' || $value === false) {
             $value = $default;
         }
 
+        // Store in request-scoped cache.
         if ($this->use_cache) {
-            $this->cache[ $cache_key ] = $value;
+            $this->cache[$cache_key] = $value;
+        }
+
+        // Store in WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_set($cache_key, $value, $this->cache_group);
         }
 
         return $value;
@@ -319,9 +424,16 @@ class Storage
     public function updateUserMeta(int $user_id, string $meta_key, mixed $value): bool
     {
         $result = update_user_meta($user_id, $meta_key, $value);
-        // Update cache.
+        $cache_key = 'user_meta_' . $user_id . '_' . $meta_key;
+
+        // Update request-scoped cache.
         if ($this->use_cache) {
-            $this->cache[ 'user_meta_' . $user_id . '_' . $meta_key ] = $value;
+            $this->cache[$cache_key] = $value;
+        }
+
+        // Update WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_set($cache_key, $value, $this->cache_group);
         }
 
         return $result !== false;
@@ -338,9 +450,16 @@ class Storage
     public function deleteUserMeta(int $user_id, string $meta_key): bool
     {
         $result = delete_user_meta($user_id, $meta_key);
-        // Clear cache.
+        $cache_key = 'user_meta_' . $user_id . '_' . $meta_key;
+
+        // Clear request-scoped cache.
         if ($this->use_cache) {
-            unset($this->cache[ 'user_meta_' . $user_id . '_' . $meta_key ]);
+            unset($this->cache[$cache_key]);
+        }
+
+        // Clear WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_delete($cache_key, $this->cache_group);
         }
 
         return $result;
@@ -387,18 +506,36 @@ class Storage
     public function getTermMeta(int $term_id, string $meta_key, mixed $default = null): mixed
     {
         $cache_key = 'term_meta_' . $term_id . '_' . $meta_key;
-        if ($this->use_cache && isset($this->cache[ $cache_key ])) {
-            return $this->cache[ $cache_key ];
+
+        // Check request-scoped cache first.
+        if ($this->use_cache && isset($this->cache[$cache_key])) {
+            return $this->cache[$cache_key];
+        }
+
+        // Check WordPress object cache.
+        if ($this->use_object_cache) {
+            $value = wp_cache_get($cache_key, $this->cache_group);
+            if ($value !== false) {
+                $this->cache[$cache_key] = $value;
+                return $value;
+            }
         }
 
         $value = get_term_meta($term_id, $meta_key, true);
+
         // Return default if empty.
         if ($value === '' || $value === false) {
             $value = $default;
         }
 
+        // Store in request-scoped cache.
         if ($this->use_cache) {
-            $this->cache[ $cache_key ] = $value;
+            $this->cache[$cache_key] = $value;
+        }
+
+        // Store in WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_set($cache_key, $value, $this->cache_group);
         }
 
         return $value;
@@ -416,9 +553,16 @@ class Storage
     public function updateTermMeta(int $term_id, string $meta_key, mixed $value): bool
     {
         $result = update_term_meta($term_id, $meta_key, $value);
-        // Update cache.
+        $cache_key = 'term_meta_' . $term_id . '_' . $meta_key;
+
+        // Update request-scoped cache.
         if ($this->use_cache) {
-            $this->cache[ 'term_meta_' . $term_id . '_' . $meta_key ] = $value;
+            $this->cache[$cache_key] = $value;
+        }
+
+        // Update WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_set($cache_key, $value, $this->cache_group);
         }
 
         return $result !== false;
@@ -435,9 +579,16 @@ class Storage
     public function deleteTermMeta(int $term_id, string $meta_key): bool
     {
         $result = delete_term_meta($term_id, $meta_key);
-        // Clear cache.
+        $cache_key = 'term_meta_' . $term_id . '_' . $meta_key;
+
+        // Clear request-scoped cache.
         if ($this->use_cache) {
-            unset($this->cache[ 'term_meta_' . $term_id . '_' . $meta_key ]);
+            unset($this->cache[$cache_key]);
+        }
+
+        // Clear WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_delete($cache_key, $this->cache_group);
         }
 
         return $result;
@@ -459,18 +610,36 @@ class Storage
     public function getCommentMeta(int $comment_id, string $meta_key, mixed $default = null): mixed
     {
         $cache_key = 'comment_meta_' . $comment_id . '_' . $meta_key;
-        if ($this->use_cache && isset($this->cache[ $cache_key ])) {
-            return $this->cache[ $cache_key ];
+
+        // Check request-scoped cache first.
+        if ($this->use_cache && isset($this->cache[$cache_key])) {
+            return $this->cache[$cache_key];
+        }
+
+        // Check WordPress object cache.
+        if ($this->use_object_cache) {
+            $value = wp_cache_get($cache_key, $this->cache_group);
+            if ($value !== false) {
+                $this->cache[$cache_key] = $value;
+                return $value;
+            }
         }
 
         $value = get_comment_meta($comment_id, $meta_key, true);
+
         // Return default if empty.
         if ($value === '' || $value === false) {
             $value = $default;
         }
 
+        // Store in request-scoped cache.
         if ($this->use_cache) {
-            $this->cache[ $cache_key ] = $value;
+            $this->cache[$cache_key] = $value;
+        }
+
+        // Store in WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_set($cache_key, $value, $this->cache_group);
         }
 
         return $value;
@@ -488,9 +657,16 @@ class Storage
     public function updateCommentMeta(int $comment_id, string $meta_key, mixed $value): bool
     {
         $result = update_comment_meta($comment_id, $meta_key, $value);
-        // Update cache.
+        $cache_key = 'comment_meta_' . $comment_id . '_' . $meta_key;
+
+        // Update request-scoped cache.
         if ($this->use_cache) {
-            $this->cache[ 'comment_meta_' . $comment_id . '_' . $meta_key ] = $value;
+            $this->cache[$cache_key] = $value;
+        }
+
+        // Update WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_set($cache_key, $value, $this->cache_group);
         }
 
         return $result !== false;
@@ -507,9 +683,16 @@ class Storage
     public function deleteCommentMeta(int $comment_id, string $meta_key): bool
     {
         $result = delete_comment_meta($comment_id, $meta_key);
-        // Clear cache.
+        $cache_key = 'comment_meta_' . $comment_id . '_' . $meta_key;
+
+        // Clear request-scoped cache.
         if ($this->use_cache) {
-            unset($this->cache[ 'comment_meta_' . $comment_id . '_' . $meta_key ]);
+            unset($this->cache[$cache_key]);
+        }
+
+        // Clear WordPress object cache.
+        if ($this->use_object_cache) {
+            wp_cache_delete($cache_key, $this->cache_group);
         }
 
         return $result;
@@ -529,13 +712,27 @@ class Storage
     public function clearCache(?string $prefix = null): void
     {
         if ($prefix === null) {
+            // Clear all request-scoped cache.
+            $keys = array_keys($this->cache);
             $this->cache = array();
+
+            // Clear all from WordPress object cache.
+            if ($this->use_object_cache) {
+                foreach ($keys as $key) {
+                    wp_cache_delete($key, $this->cache_group);
+                }
+            }
             return;
         }
 
         foreach ($this->cache as $key => $value) {
             if (strpos($key, $prefix) === 0) {
-                unset($this->cache[ $key ]);
+                unset($this->cache[$key]);
+
+                // Clear from WordPress object cache.
+                if ($this->use_object_cache) {
+                    wp_cache_delete($key, $this->cache_group);
+                }
             }
         }
     }

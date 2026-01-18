@@ -36,7 +36,7 @@ class Repeater
      * @since 1.0.0
      * @var FieldTypes
      */
-    private FieldTypes $field_types;
+    private  FieldTypes $field_types;
     /**
      * Constructor.
      *

@@ -36,6 +36,7 @@ class OptionsPage
      * @var array
      */
     private array $config;
+
     /**
      * Field types instance.
      *
@@ -43,6 +44,7 @@ class OptionsPage
      * @var FieldTypes
      */
     private FieldTypes $field_types;
+
     /**
      * Storage instance.
      *
@@ -50,20 +52,30 @@ class OptionsPage
      * @var Storage
      */
     private Storage $storage;
+
     /**
      * Registered sections.
      *
      * @since 1.0.0
      * @var array
      */
-    private array $sections = array();
+    private array $sections = [];
+
     /**
      * Registered fields organized by section.
      *
      * @since 1.0.0
      * @var array
      */
-    private array $fields = array();
+    private array $fields = [];
+
+    /**
+     * Cached all fields array.
+     *
+     * @since 1.0.0
+     * @var array|null
+     */
+    private ?array $all_fields_cache = null;
     /**
      * Default configuration values.
      *
@@ -71,17 +83,18 @@ class OptionsPage
      * @var array
      */
     private array $defaults = array(
-        'page_title'  => 'Options',
-        'menu_title'  => 'Options',
-        'capability'  => 'manage_options',
-        'menu_slug'   => 'kp-wsf-options',
-        'parent_slug' => '',
-        'icon_url'    => 'dashicons-admin-generic',
-        'position'    => null,
-        'option_name' => '',
-        'option_key'  => '',
-        'tabs'        => array(),
-        'sections'    => array(),
+        'page_title'            => 'Options',
+        'menu_title'            => 'Options',
+        'capability'            => 'manage_options',
+        'menu_slug'             => 'kp-wsf-options',
+        'parent_slug'           => '',
+        'icon_url'              => 'dashicons-admin-generic',
+        'position'              => null,
+        'option_name'           => '',
+        'option_key'            => '',
+        'show_export_import'    => false,
+        'tabs'                  => array(),
+        'sections'              => array(),
     );
     /**
      * Constructor.
@@ -283,7 +296,7 @@ class OptionsPage
      */
     private function registerField(string $section_id, array $field): void
     {
-        // Skip layout-only fields.
+        /*// Skip layout-only fields.
         $layout_types = array( 'heading', 'separator', 'html', 'message' );
         if (in_array($field['type'] ?? 'text', $layout_types, true)) {
             add_settings_field(
@@ -297,7 +310,7 @@ class OptionsPage
                 $section_id
             );
             return;
-        }
+        }*/
 
         $label = $field['label'] ?? '';
         if (! empty($field['sublabel'])) {
@@ -407,9 +420,13 @@ class OptionsPage
             }
 
             submit_button($this->config['save_button'] ?? __('Save Settings', 'kp-wsf'));
+            $this->renderExportImport();
+
+            // Output AJAX nonce for custom operations.
+            wp_nonce_field($this->getNonceAction(), $this->getNonceName());
             ?>
-        </form>
-        <?php
+            </form>
+            <?php
 
         // render the footer test, if it's set.. allows some html
         if ($this->config['footer_text']) :
@@ -603,5 +620,129 @@ class OptionsPage
         $options = $this->getOptions();
         unset($options[ $key ]);
         return $this->storage->updateOption($this->config['option_key'], $options);
+    }
+
+    /**
+     * Get the nonce action for this options page.
+     *
+     * @since  1.0.0
+     * @return string
+     */
+    public function getNonceAction(): string
+    {
+        return $this->config['menu_slug'] . '_ajax_action';
+    }
+
+    /**
+     * Get the nonce name for this options page.
+     *
+     * @since  1.0.0
+     * @return string
+     */
+    public function getNonceName(): string
+    {
+        return $this->config['menu_slug'] . '_ajax_nonce';
+    }
+
+    /**
+     * Verify AJAX request for this options page.
+     *
+     * @since  1.0.0
+     * @return bool
+     */
+    public function verifyAjaxRequest(): bool
+    {
+        $nonce = isset($_POST[$this->getNonceName()])
+            ? sanitize_text_field(wp_unslash($_POST[$this->getNonceName()]))
+            : '';
+
+        if (empty($nonce) || !wp_verify_nonce($nonce, $this->getNonceAction())) {
+            return false;
+        }
+
+        if (!current_user_can($this->config['capability'])) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Render export/import section.
+     *
+     * @since  1.0.0
+     * @return void
+     */
+    private function renderExportImport(): void
+    {
+        if (empty($this->config['show_export_import'])) {
+            return;
+        }
+        ?>
+        <div class="kp-wsf-export-import">
+            <h2><?php esc_html_e('Export / Import Settings', 'kp-wsf'); ?></h2>
+            <p class="description"><?php esc_html_e('Export or import all settings for this options page, including all tabs.', 'kp-wsf'); ?></p>
+            
+            <div class="kp-wsf-export-import-columns">
+                <div class="kp-wsf-export-section">
+                    <h3><?php esc_html_e('Export', 'kp-wsf'); ?></h3>
+                    <p class="description"><?php esc_html_e('Download all current settings (including defaults) as a JSON file.', 'kp-wsf'); ?></p>
+                    <button type="button" class="button button-secondary kp-wsf-export-btn" data-menu-slug="<?php echo esc_attr($this->config['menu_slug']); ?>">
+                        <?php esc_html_e('Export All Settings', 'kp-wsf'); ?>
+                    </button>
+                </div>
+
+                <div class="kp-wsf-import-section">
+                    <h3><?php esc_html_e('Import', 'kp-wsf'); ?></h3>
+                    <p class="description"><?php esc_html_e('Upload a previously exported JSON file to restore all settings.', 'kp-wsf'); ?></p>
+                    <input type="file" class="kp-wsf-import-file" accept=".json" />
+                    <button type="button" class="button button-secondary kp-wsf-import-btn" data-menu-slug="<?php echo esc_attr($this->config['menu_slug']); ?>" disabled>
+                        <?php esc_html_e('Import All Settings', 'kp-wsf'); ?>
+                    </button>
+                    <p class="kp-wsf-import-status"></p>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Get all registered fields across all sections and tabs.
+     *
+     * @since  1.0.0
+     * @return array Array of all field configurations.
+     */
+    public function getAllFields(): array
+    {
+        // Return cached result if available.
+        if ($this->all_fields_cache !== null) {
+            return $this->all_fields_cache;
+        }
+
+        $all_fields = [];
+        $layout_types = ['heading', 'separator', 'html', 'message'];
+
+        foreach ($this->fields as $section_id => $section_fields) {
+            foreach ($section_fields as $field) {
+                $field_type = $field['type'] ?? 'text';
+
+                $all_fields[$field['id']] = $field;
+
+                // Handle repeater sub-fields.
+                if ($field_type === 'repeater' && !empty($field['fields'])) {
+                    $all_fields[$field['id']]['_is_repeater'] = true;
+                }
+
+                // Handle group sub-fields.
+                if ($field_type === 'group' && !empty($field['fields'])) {
+                    $all_fields[$field['id']]['_is_group'] = true;
+                }
+            }
+        }
+
+        // Cache the result.
+        $this->all_fields_cache = $all_fields;
+
+        return $all_fields;
     }
 }
