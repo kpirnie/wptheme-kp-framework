@@ -68,11 +68,12 @@ class Sanitizer
             'color'                     => $this->sanitizeColor($value),
             'image', 'file'             => $this->sanitizeAttachment($value),
             'gallery'                   => $this->sanitizeGallery($value),
-            'post_select', 'page_select' => $this->sanitizePostSelect($value),
+            'post_select', 'page_select'=> $this->sanitizePostSelect($value),
             'term_select'               => $this->sanitizeTermSelect($value),
             'user_select'               => $this->sanitizeUserSelect($value),
             'repeater'                  => $this->sanitizeRepeater($value, $field),
             'group'                     => $this->sanitizeGroup($value, $field),
+            'accordion'                 => $this->sanitizeGroup($value, $field),
             'heading', 'separator', 'html', 'message' => null,
             default                     => $this->sanitizeText($value),
         };
@@ -259,28 +260,7 @@ class Sanitizer
             $value = (string) $value;
         }
 
-        // Limit password length to prevent DoS via extremely long strings.
-        $max_length = apply_filters('kp_wsf_max_password_length', 4096);
-
-        if (strlen($value) > $max_length) {
-            $value = substr($value, 0, $max_length);
-        }
-
-        // Remove null bytes which can be used in injection attacks.
-        $value = str_replace(chr(0), '', $value);
-
-        // Remove all control characters (0x00-0x1F and 0x7F).
-        $value = preg_replace('/[\x00-\x1F\x7F]/u', '', $value);
-
-        // Normalize Unicode to prevent homograph attacks.
-        if (function_exists('normalizer_normalize')) {
-            $normalized = normalizer_normalize($value, \Normalizer::FORM_C);
-            if ($normalized !== false) {
-                $value = $normalized;
-            }
-        }
-
-        // Trim whitespace from ends.
+        // Only trim whitespace from ends.
         return trim($value);
     }
 

@@ -19,7 +19,6 @@ namespace KP\WPFieldFramework;
 
 // Prevent direct access.
 defined('ABSPATH') || exit;
-
 /**
  * Class MetaBox
  *
@@ -30,47 +29,34 @@ defined('ABSPATH') || exit;
  */
 class MetaBox
 {
-
     /**
      * Meta box configuration.
      *
      * @since 1.0.0
      * @var array
      */
-    private  array $config;
-
+    private array $config;
     /**
      * Field types instance.
      *
      * @since 1.0.0
      * @var FieldTypes
      */
-    private  FieldTypes $field_types;
-
+    private FieldTypes $field_types;
     /**
      * Storage instance.
      *
      * @since 1.0.0
      * @var Storage
      */
-    private  Storage $storage;
-
+    private Storage $storage;
     /**
      * Registered fields.
      *
      * @since 1.0.0
      * @var array
      */
-    private array $fields = [];
-
-    /**
-     * Cached field IDs for batch operations.
-     *
-     * @since 1.0.0
-     * @var array|null
-     */
-    private ?array $field_ids_cache = null;
-
+    private array $fields = array();
     /**
      * Default configuration values.
      *
@@ -263,7 +249,7 @@ class MetaBox
         // Verify nonce.
         $nonce_name = $this->config['id'] . '_nonce';
         $nonce_action = $this->config['id'] . '_nonce_action';
-        if (! isset($_POST[$nonce_name]) || ! wp_verify_nonce(sanitize_text_field(wp_unslash($_POST[$nonce_name])), $nonce_action)) {
+        if (! isset($_POST[ $nonce_name ]) || ! wp_verify_nonce($_POST[ $nonce_name ], $nonce_action)) {
             return;
         }
 
@@ -280,46 +266,26 @@ class MetaBox
         }
 
         $sanitizer = new Sanitizer();
-        $layout_types = array('heading', 'separator', 'html', 'message');
-
-        // Collect all meta updates.
-        $meta_updates = array();
-        $meta_deletes = array();
-
+        // Save each field.
         foreach ($this->fields as $field) {
             $field_id = $field['id'];
-
             // Skip layout-only fields.
+            $layout_types = array( 'heading', 'separator', 'html', 'message' );
             if (in_array($field['type'] ?? 'text', $layout_types, true)) {
                 continue;
             }
 
             // Get submitted value.
-            $value = isset($_POST[$field_id]) ? wp_unslash($_POST[$field_id]) : null;
-
+            $value = $_POST[ $field_id ] ?? null;
             // Sanitize value.
             $sanitized_value = $sanitizer->sanitize($value, $field);
-
-            // Queue for update or delete.
+            // Update or delete meta.
             if ($sanitized_value !== null && $sanitized_value !== '' && $sanitized_value !== array()) {
-                $meta_updates[$field_id] = $sanitized_value;
+                $this->storage->updateMeta($post_id, $field_id, $sanitized_value);
             } else {
-                $meta_deletes[] = $field_id;
+                $this->storage->deleteMeta($post_id, $field_id);
             }
         }
-
-        // Batch update meta values.
-        foreach ($meta_updates as $field_id => $value) {
-            update_post_meta($post_id, $field_id, $value);
-        }
-
-        // Batch delete meta values.
-        foreach ($meta_deletes as $field_id) {
-            delete_post_meta($post_id, $field_id);
-        }
-
-        // Clear storage cache for this post.
-        $this->storage->clearCache('post_meta_' . $post_id . '_');
     }
 
     /**
@@ -359,7 +325,7 @@ class MetaBox
         // Verify nonce.
         $nonce_name = $this->config['id'] . '_nonce';
         $nonce_action = $this->config['id'] . '_nonce_action';
-        if (! isset($_POST[$nonce_name]) || ! wp_verify_nonce(sanitize_text_field(wp_unslash($_POST[$nonce_name])), $nonce_action)) {
+        if (! isset($_POST[ $nonce_name ]) || ! wp_verify_nonce($_POST[ $nonce_name ], $nonce_action)) {
             return;
         }
 
@@ -369,46 +335,26 @@ class MetaBox
         }
 
         $sanitizer = new Sanitizer();
-        $layout_types = array('heading', 'separator', 'html', 'message');
-
-        // Collect all meta updates.
-        $meta_updates = array();
-        $meta_deletes = array();
-
+        // Save each field.
         foreach ($this->fields as $field) {
             $field_id = $field['id'];
-
             // Skip layout-only fields.
+            $layout_types = array( 'heading', 'separator', 'html', 'message' );
             if (in_array($field['type'] ?? 'text', $layout_types, true)) {
                 continue;
             }
 
             // Get submitted value.
-            $value = isset($_POST[$field_id]) ? wp_unslash($_POST[$field_id]) : null;
-
+            $value = $_POST[ $field_id ] ?? null;
             // Sanitize value.
             $sanitized_value = $sanitizer->sanitize($value, $field);
-
-            // Queue for update or delete.
+            // Update or delete user meta.
             if ($sanitized_value !== null && $sanitized_value !== '' && $sanitized_value !== array()) {
-                $meta_updates[$field_id] = $sanitized_value;
+                $this->storage->updateUserMeta($user_id, $field_id, $sanitized_value);
             } else {
-                $meta_deletes[] = $field_id;
+                $this->storage->deleteUserMeta($user_id, $field_id);
             }
         }
-
-        // Batch update meta values.
-        foreach ($meta_updates as $field_id => $value) {
-            update_user_meta($user_id, $field_id, $value);
-        }
-
-        // Batch delete meta values.
-        foreach ($meta_deletes as $field_id) {
-            delete_user_meta($user_id, $field_id);
-        }
-
-        // Clear storage cache for this user.
-        $this->storage->clearCache('user_meta_' . $user_id . '_');
     }
 
     /**
@@ -421,13 +367,11 @@ class MetaBox
      */
     public function renderNavMenuFields(int $item_id, \WP_Post $item): void
     {
-        // Output nonce field (track per meta box ID to support multiple meta boxes).
-        static $nonce_outputs = [];
-        $meta_box_id = $this->config['id'];
-
-        if (! isset($nonce_outputs[$meta_box_id])) {
+        // Output nonce field (only once per menu).
+        static $nonce_output = false;
+        if (! $nonce_output) {
             wp_nonce_field($this->config['id'] . '_nonce_action', $this->config['id'] . '_nonce');
-            $nonce_outputs[$meta_box_id] = true;
+            $nonce_output = true;
         }
 
         echo '<div class="kp-wsf-nav-menu-fields">';
@@ -445,7 +389,7 @@ class MetaBox
             }
             echo $this->field_types->render($field, $value);
             if (! empty($field['description'])) {
-                echo '<span class="description">' . esc_html($field['description']) . '</span>';
+                echo '<span class="description kp-wsf-meta-description--' . $field['type'] . '">' . esc_html($field['description']) . '</span>';
             }
             echo '</div>';
         }
@@ -465,52 +409,32 @@ class MetaBox
         // Verify nonce.
         $nonce_name = $this->config['id'] . '_nonce';
         $nonce_action = $this->config['id'] . '_nonce_action';
-        if (! isset($_POST[$nonce_name]) || ! wp_verify_nonce(sanitize_text_field(wp_unslash($_POST[$nonce_name])), $nonce_action)) {
+        if (! isset($_POST[ $nonce_name ]) || ! wp_verify_nonce($_POST[ $nonce_name ], $nonce_action)) {
             return;
         }
 
         $sanitizer = new Sanitizer();
-        $layout_types = array('heading', 'separator', 'html', 'message');
-
-        // Collect all meta updates.
-        $meta_updates = array();
-        $meta_deletes = array();
-
+        // Save each field.
         foreach ($this->fields as $field) {
             $field_id = $field['id'] . '_' . $menu_item_id;
             $meta_key = $field['id'];
-
             // Skip layout-only fields.
+            $layout_types = array( 'heading', 'separator', 'html', 'message' );
             if (in_array($field['type'] ?? 'text', $layout_types, true)) {
                 continue;
             }
 
             // Get submitted value.
-            $value = isset($_POST[$field_id]) ? wp_unslash($_POST[$field_id]) : null;
-
+            $value = $_POST[ $field_id ] ?? null;
             // Sanitize value.
             $sanitized_value = $sanitizer->sanitize($value, $field);
-
-            // Queue for update or delete.
+            // Update or delete meta.
             if ($sanitized_value !== null && $sanitized_value !== '' && $sanitized_value !== array()) {
-                $meta_updates[$meta_key] = $sanitized_value;
+                $this->storage->updateMeta($menu_item_id, $meta_key, $sanitized_value);
             } else {
-                $meta_deletes[] = $meta_key;
+                $this->storage->deleteMeta($menu_item_id, $meta_key);
             }
         }
-
-        // Batch update meta values.
-        foreach ($meta_updates as $meta_key => $value) {
-            update_post_meta($menu_item_id, $meta_key, $value);
-        }
-
-        // Batch delete meta values.
-        foreach ($meta_deletes as $meta_key) {
-            delete_post_meta($menu_item_id, $meta_key);
-        }
-
-        // Clear storage cache for this menu item.
-        $this->storage->clearCache('post_meta_' . $menu_item_id . '_');
     }
 
     /**

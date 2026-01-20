@@ -36,7 +36,6 @@ class OptionsPage
      * @var array
      */
     private array $config;
-
     /**
      * Field types instance.
      *
@@ -44,7 +43,6 @@ class OptionsPage
      * @var FieldTypes
      */
     private FieldTypes $field_types;
-
     /**
      * Storage instance.
      *
@@ -52,30 +50,20 @@ class OptionsPage
      * @var Storage
      */
     private Storage $storage;
-
     /**
      * Registered sections.
      *
      * @since 1.0.0
      * @var array
      */
-    private array $sections = [];
-
+    private array $sections = array();
     /**
      * Registered fields organized by section.
      *
      * @since 1.0.0
      * @var array
      */
-    private array $fields = [];
-
-    /**
-     * Cached all fields array.
-     *
-     * @since 1.0.0
-     * @var array|null
-     */
-    private ?array $all_fields_cache = null;
+    private array $fields = array();
     /**
      * Default configuration values.
      *
@@ -296,21 +284,6 @@ class OptionsPage
      */
     private function registerField(string $section_id, array $field): void
     {
-        /*// Skip layout-only fields.
-        $layout_types = array( 'heading', 'separator', 'html', 'message' );
-        if (in_array($field['type'] ?? 'text', $layout_types, true)) {
-            add_settings_field(
-                $field['id'],
-                '',
-                function () use ($field) {
-
-                    echo $this->field_types->render($field, null);
-                },
-                $this->config['menu_slug'],
-                $section_id
-            );
-            return;
-        }*/
 
         $label = $field['label'] ?? '';
         if (! empty($field['sublabel'])) {
@@ -395,6 +368,15 @@ class OptionsPage
             printf('<a href="%s" class="nav-tab%s">%s</a>', esc_url(add_query_arg('tab', $tab_id)), esc_attr($active), esc_html($tab['title'] ?? $tab_id));
         }
         echo '</nav>';
+
+        // Render tab description if present.
+        if (!empty($tabs[$current_tab]['description'])) {
+            printf(
+                '<p class="kp-wsf-tab-description">%s</p>',
+                wp_kses_post($tabs[$current_tab]['description'])
+            );
+        }
+
         // Render form with only current tab's sections.
         $this->renderForm($current_tab);
     }
@@ -421,12 +403,9 @@ class OptionsPage
 
             submit_button($this->config['save_button'] ?? __('Save Settings', 'kp-wsf'));
             $this->renderExportImport();
-
-            // Output AJAX nonce for custom operations.
-            wp_nonce_field($this->getNonceAction(), $this->getNonceName());
             ?>
-            </form>
-            <?php
+        </form>
+        <?php
 
         // render the footer test, if it's set.. allows some html
         if ($this->config['footer_text']) :
@@ -471,6 +450,10 @@ class OptionsPage
             if ($section['title']) {
                 echo '<h2>' . esc_html($section['title']) . '</h2>';
             }
+            // Render section.
+            if ($section['description']) {
+                $this->renderSectionDescription($section);
+            }
 
             if ($section['callback']) {
                 call_user_func($section['callback'], $section);
@@ -496,7 +479,7 @@ class OptionsPage
     private function renderSectionDescription(array $section): void
     {
         if (! empty($section['description'])) {
-            printf('<p class="description">%s</p>', wp_kses_post($section['description']));
+            printf('<p class="description kp-wsf-description--section">%s</p>', wp_kses_post($section['description']));
         }
     }
 
@@ -526,8 +509,8 @@ class OptionsPage
         echo $this->field_types->render($field, $value);
 
         // Render description if present.
-        if (! empty($field['description'])) {
-            printf('<p class="description">%s</p>', wp_kses_post($field['description']));
+        if (! empty($field['description']) && ! in_array($field['type'], ['group', 'accordion', 'repeater'])) {
+            printf('<p class="description kp-wsf-field-description--%s">%s</p>', $field['type'], wp_kses_post($field['description']));
         }
     }
 
@@ -623,51 +606,6 @@ class OptionsPage
     }
 
     /**
-     * Get the nonce action for this options page.
-     *
-     * @since  1.0.0
-     * @return string
-     */
-    public function getNonceAction(): string
-    {
-        return $this->config['menu_slug'] . '_ajax_action';
-    }
-
-    /**
-     * Get the nonce name for this options page.
-     *
-     * @since  1.0.0
-     * @return string
-     */
-    public function getNonceName(): string
-    {
-        return $this->config['menu_slug'] . '_ajax_nonce';
-    }
-
-    /**
-     * Verify AJAX request for this options page.
-     *
-     * @since  1.0.0
-     * @return bool
-     */
-    public function verifyAjaxRequest(): bool
-    {
-        $nonce = isset($_POST[$this->getNonceName()])
-            ? sanitize_text_field(wp_unslash($_POST[$this->getNonceName()]))
-            : '';
-
-        if (empty($nonce) || !wp_verify_nonce($nonce, $this->getNonceAction())) {
-            return false;
-        }
-
-        if (!current_user_can($this->config['capability'])) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
      * Render export/import section.
      *
      * @since  1.0.0
@@ -714,34 +652,28 @@ class OptionsPage
      */
     public function getAllFields(): array
     {
-        // Return cached result if available.
-        if ($this->all_fields_cache !== null) {
-            return $this->all_fields_cache;
-        }
-
         $all_fields = [];
-        $layout_types = ['heading', 'separator', 'html', 'message'];
 
         foreach ($this->fields as $section_id => $section_fields) {
             foreach ($section_fields as $field) {
-                $field_type = $field['type'] ?? 'text';
-
-                $all_fields[$field['id']] = $field;
+                // Skip layout-only fields.
+                $layout_types = ['heading', 'separator', 'html', 'message'];
+                if (!in_array($field['type'] ?? 'text', $layout_types, true)) {
+                    $all_fields[$field['id']] = $field;
+                }
 
                 // Handle repeater sub-fields.
-                if ($field_type === 'repeater' && !empty($field['fields'])) {
+                if (($field['type'] ?? '') === 'repeater' && !empty($field['fields'])) {
+                    // Store repeater field info for reference.
                     $all_fields[$field['id']]['_is_repeater'] = true;
                 }
 
                 // Handle group sub-fields.
-                if ($field_type === 'group' && !empty($field['fields'])) {
+                if (($field['type'] ?? '') === 'group' && !empty($field['fields'])) {
                     $all_fields[$field['id']]['_is_group'] = true;
                 }
             }
         }
-
-        // Cache the result.
-        $this->all_fields_cache = $all_fields;
 
         return $all_fields;
     }

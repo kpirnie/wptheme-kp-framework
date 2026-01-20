@@ -36,7 +36,7 @@ class Repeater
      * @since 1.0.0
      * @var FieldTypes
      */
-    private  FieldTypes $field_types;
+    private FieldTypes $field_types;
     /**
      * Constructor.
      *
@@ -76,8 +76,15 @@ class Repeater
         // Build HTML.
         $html = sprintf('<div class="kp-wsf-repeater" data-min-rows="%d" data-max-rows="%d" data-field-id="%s">', $min_rows, $max_rows, esc_attr($field['id']));
         // Repeater header.
-        if (! empty($field['label'])) {
-            $html .= sprintf('<div class="kp-wsf-repeater__header"><h4>%s</h4></div>', esc_html($field['label']));
+        if (!empty($field['label']) || !empty($field['description'])) {
+            $html .= '<div class="kp-wsf-repeater__header">';
+            if (!empty($field['label'])) {
+                $html .= sprintf('<h4>%s</h4>', esc_html($field['label']));
+            }
+            if (!empty($field['description'])) {
+                $html .= sprintf('<p class="description">%s</p>', wp_kses_post($field['description']));
+            }
+            $html .= '</div>';
         }
 
         // Rows container.
@@ -182,7 +189,7 @@ class Repeater
                 )
             );
             // Render the sub-field.
-                    $html .= $this->renderSubField($sub_field_config, $sub_value);
+            $html .= $this->renderSubField($sub_field_config, $sub_value);
         }
 
         $html .= '</div>';
@@ -204,30 +211,35 @@ class Repeater
     private function renderSubField(array $field, mixed $value): string
     {
         $type = $field['type'] ?? 'text';
+
         // Skip rendering repeaters within repeaters (prevent infinite nesting).
         if ($type === 'repeater') {
             return '<p class="kp-wsf-error">' . esc_html__('Nested repeaters are not supported.', 'kp-wsf') . '</p>';
         }
 
         // Layout-only fields.
-        $layout_types = array( 'heading', 'separator', 'html', 'message' );
+        $layout_types = array('heading', 'separator', 'html', 'message');
         if (in_array($type, $layout_types, true)) {
             return $this->field_types->render($field, $value);
         }
 
+        // Check for inline
+        $is_inline = !empty($field['inline']) && filter_var($field['inline'], FILTER_VALIDATE_BOOLEAN);
+        $inline_class = $is_inline ? ' kp-wsf-repeater__field--inline' : '';
+
         // Standard field with label and sublabel.
-        $html = '<div class="kp-wsf-repeater__field kp-wsf-repeater__field--' . esc_attr($type) . '">';
-        if (! empty($field['label'])) {
-            $required = ! empty($field['required']) ? ' <span class="required">*</span>' : '';
+        $html = '<div class="kp-wsf-repeater__field kp-wsf-repeater__field--' . esc_attr($type) . $inline_class . '">';
+        if (!empty($field['label'])) {
+            $required = !empty($field['required']) ? ' <span class="required">*</span>' : '';
             $html .= sprintf('<label for="%s">%s%s</label>', esc_attr($field['id']), esc_html($field['label']), $required);
         }
-        if (! empty($field['sublabel'])) {
+        if (!empty($field['sublabel'])) {
             $html .= sprintf('<span class="kp-wsf-sublabel">%s</span>', wp_kses_post($field['sublabel']));
         }
 
         $html .= '<div class="kp-wsf-repeater__field-input">';
         $html .= $this->field_types->render($field, $value);
-        if (! empty($field['description'])) {
+        if (!empty($field['description'])) {
             $html .= sprintf('<p class="description">%s</p>', wp_kses_post($field['description']));
         }
 

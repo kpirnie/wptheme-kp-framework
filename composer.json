@@ -12,8 +12,8 @@
         }
     ],
     "require": {
-        "php": ">=8.2",
-        "kevinpirnie/kpt-wpfieldframework": "dev-develop"
+        "php": ">=8.4",
+        "kevinpirnie/kpt-wpfieldframework": ">=1"
     },
     "autoload": {
         "classmap": [

@@ -416,6 +416,29 @@ if( ! class_exists( 'KPF_Framework_Loader' ) ) {
                         'js' => [],
                     ],
                 ],
+				'materialize' => [
+					'name' => 'Materialize',
+					'handle' => 'materialize',
+					'versions' => [
+						'latest' => '1.0.0',
+						'1.0' => '1.0.0',
+						'0.100.2' => '0.100.2',
+						
+					],
+					'cdn' => [
+						'css' => 'https://cdn.jsdelivr.net/npm/materialize-css@{version}/dist/css/materialize.min.css',
+						'js' => 'https://cdn.jsdelivr.net/npm/materialize-css@{version}/dist/js/materialize.min.js',
+					],
+					'integrity' => [
+						'1.0.0' => [
+							'css' => 'sha512-4Eb8jXMc9aCLcGPmH7YLpOO0f7C4RdJj5x8Y7hW8yPLgRGUA3M1dI5dczPqfvGOCTGp8m3UhIg5FY0GNWG0XHw==',
+							'js' => 'sha512-O2RDsJcXfXVzplRMHm6zuGuW1YkXVl3KTNrXJN4ZY4H0rNk6Y3T4lLDn3ENYTI4r1NIedNzthVQN/0GwMN9CIg==',
+						],
+					],
+					'dependencies' => [
+						'js' => [],
+					],
+				],
             ];
 
             // Allow filtering of framework configurations

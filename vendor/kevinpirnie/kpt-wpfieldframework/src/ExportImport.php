@@ -57,10 +57,6 @@ class ExportImport
      */
     public function exportWithDefaults(array $options_pages): string
     {
-        // Set memory limit for large exports.
-        $max_export_memory = apply_filters('kp_wsf_max_export_memory', '256M');
-        @ini_set('memory_limit', $max_export_memory);
-
         $export_data = [
             'version'    => Framework::VERSION,
             'exported'   => current_time('c'),
@@ -82,9 +78,6 @@ class ExportImport
                 } elseif (isset($field['default'])) {
                     $merged_values[$field_id] = $field['default'];
                 }
-
-                // Free memory for large fields.
-                unset($stored_values[$field_id]);
             }
 
             // Also include any stored values not in field definitions (legacy/custom).
@@ -94,10 +87,6 @@ class ExportImport
                 }
             }
 
-            // Free memory.
-            unset($stored_values);
-            unset($all_fields);
-
             if (!empty($merged_values)) {
                 $export_data['settings'][$option_key] = $merged_values;
             }
@@ -105,7 +94,7 @@ class ExportImport
 
         return wp_json_encode($export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
-    
+
     /**
      * Export settings to JSON.
      *
@@ -115,10 +104,6 @@ class ExportImport
      */
     public function export(array $option_keys): string
     {
-        // Set memory limit for large exports.
-        $max_export_memory = apply_filters('kp_wsf_max_export_memory', '256M');
-        @ini_set('memory_limit', $max_export_memory);
-
         $export_data = [
             'version'    => Framework::VERSION,
             'exported'   => current_time('c'),
@@ -131,9 +116,6 @@ class ExportImport
             if (!empty($value)) {
                 $export_data['settings'][$option_key] = $value;
             }
-
-            // Free memory.
-            unset($value);
         }
 
         return wp_json_encode($export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
@@ -172,7 +154,7 @@ class ExportImport
      * @param  array  $allowed_options Optional whitelist of option keys to import.
      * @return array                   Result with 'success', 'imported', and 'errors'.
      */
-    public function import(string $json, array $allowed_options = [], array $field_definitions = []): array
+    public function import(string $json, array $allowed_options = []): array
     {
         $result = [
             'success'  => false,
@@ -193,18 +175,6 @@ class ExportImport
             return $result;
         }
 
-        // Validate version compatibility.
-        if (isset($data['version']) && version_compare($data['version'], Framework::VERSION, '>')) {
-            $result['errors'][] = sprintf(
-                __('Import file version (%s) is newer than current framework version (%s).', 'kp-wsf'),
-                $data['version'],
-                Framework::VERSION
-            );
-            return $result;
-        }
-
-        $sanitizer = new Sanitizer();
-
         // Import each setting.
         foreach ($data['settings'] as $option_key => $option_value) {
             // Check whitelist if provided.
@@ -222,40 +192,14 @@ class ExportImport
                 continue;
             }
 
-            // Validate and sanitize option values against field definitions.
-            if (!is_array($option_value)) {
-                $result['errors'][] = sprintf(
-                    __('Option "%s" has invalid value format.', 'kp-wsf'),
-                    $option_key
-                );
-                continue;
-            }
-
-            $sanitized_value = [];
-            foreach ($option_value as $field_id => $field_value) {
-                $field_id = sanitize_key($field_id);
-                if (empty($field_id)) {
-                    continue;
-                }
-
-                // If field definitions provided, validate and sanitize against them.
-                if (!empty($field_definitions[$option_key][$field_id])) {
-                    $field_config = $field_definitions[$option_key][$field_id];
-                    $sanitized_value[$field_id] = $sanitizer->sanitize($field_value, $field_config);
-                } else {
-                    // Fallback to generic sanitization.
-                    $sanitized_value[$field_id] = $sanitizer->sanitizeUnknown($field_value);
-                }
-            }
-
             // Update option.
-            $updated = $this->storage->updateOption($option_key, $sanitized_value);
+            $updated = $this->storage->updateOption($option_key, $option_value);
             if ($updated) {
                 $result['imported'][] = $option_key;
             } else {
                 // Check if value is the same (no update needed).
                 $current = $this->storage->getOption($option_key, []);
-                if ($current === $sanitized_value) {
+                if ($current === $option_value) {
                     $result['imported'][] = $option_key;
                 } else {
                     $result['errors'][] = sprintf(
