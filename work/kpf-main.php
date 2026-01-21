@@ -95,11 +95,51 @@ if( ! class_exists( 'KPF_Main' ) ) {
          */
         private static function init_hooks(): void {
 
+            // initialize the settings from the modules
+            add_action( 'admin_menu', function( ) {
+
+                // Initialize the module registry (handles module loading)
+                KPF_Module_Registry::get_instance( );
+
+                // Initialize the settings page
+                new KPF_Settings( );
+            }, 5 );
+
             // Initialize theme settings
             add_action( 'after_setup_theme', function( ) { 
 
-                // fire up the settings class
-                new KPF_Settings( );
+                /**
+                 * Get theme option
+                 * 
+                 * @author Kevin Pirnie <iam@kevinpirnie.com>
+                 * @copyright 2025 Kevin Pirnie
+                 * 
+                 * @since 1.0.1
+                 * @package KP Theme Framework
+                 * @access public
+                 * 
+                 * @param string $key Option key
+                 * @param mixed $default Default value
+                 * @return mixed Returns the value of the option requested
+                 */
+                if( ! function_exists( 'get_kpf_option' ) ) {
+
+                    // get the theme option
+                    function get_kpf_option( string $key, mixed $default = null ): mixed {
+
+                        try {
+                            // setup the framework storage
+                            $fw_storage = \KP\WPFieldFramework\Framework::getInstance()->getStorage();
+
+                            // return the option from the framework
+                            return $fw_storage->getOption( $key, $default);
+                            
+                        } catch ( \TypeError $e ) {
+                            // Storage not initialized yet, return default
+                            return $default;
+                        }
+                    }
+                }
 
             }, 10 );
             

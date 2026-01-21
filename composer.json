@@ -11,13 +11,24 @@
             "role": "Developer"
         }
     ],
+    "funding": [
+        {
+            "type": "paypal",
+            "url": "https://www.paypal.biz/kevinpirnie"
+        },
+        {
+            "type": "ko-fi",
+            "url": "https://ko-fi.com/kevinpirnie"
+        }
+    ],
     "require": {
         "php": ">=8.4",
         "kevinpirnie/kpt-wpfieldframework": ">=1"
     },
     "autoload": {
         "classmap": [
-            "work/inc"
+            "work/classes",
+            "work/modules"
         ],
         "files": [
             "work/kpf-main.php"

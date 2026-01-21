@@ -2,23 +2,23 @@
     "packages": [
         {
             "name": "kevinpirnie/kpt-wpfieldframework",
-            "version": "v1.6.01",
-            "version_normalized": "1.6.01.0",
+            "version": "v1.6.30",
+            "version_normalized": "1.6.30.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/kpirnie/kp-wpfieldframework.git",
-                "reference": "9dbf171549bcb3201d7951c3f7ded001d9d0e9bf"
+                "reference": "d844421cfceff4613a1f918975b5c498387a5df6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/kpirnie/kp-wpfieldframework/zipball/9dbf171549bcb3201d7951c3f7ded001d9d0e9bf",
-                "reference": "9dbf171549bcb3201d7951c3f7ded001d9d0e9bf",
+                "url": "https://api.github.com/repos/kpirnie/kp-wpfieldframework/zipball/d844421cfceff4613a1f918975b5c498387a5df6",
+                "reference": "d844421cfceff4613a1f918975b5c498387a5df6",
                 "shasum": ""
             },
             "require": {
-                "php": ">=8.2"
+                "php": ">=8.4"
             },
-            "time": "2026-01-20T13:51:57+00:00",
+            "time": "2026-01-21T14:05:23+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
