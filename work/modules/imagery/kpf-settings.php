@@ -204,13 +204,16 @@ if( ! class_exists( 'KPF_Module_Imagery_Settings' ) ) {
                         'type'     => 'text',
                         'label'    => __( 'Image Width', 'kpf' ),
                         'sublabel' => __( 'in pixels', 'kpf' ),
+                        'inline'   => true,
                     ],
                     [
                         'id'       => 'kpf_img_height',
                         'type'     => 'text',
                         'label'    => __( 'Image Height', 'kpf' ),
                         'sublabel' => __( 'in pixels', 'kpf' ),
+                        'inline'   => true,
                     ],
+                    ['id' => '', 'type' => 'html', 'content' => '<br />'],
                     [
                         'id'      => 'kpf_img_crop_vert',
                         'type'    => 'radio',
@@ -222,6 +225,7 @@ if( ! class_exists( 'KPF_Module_Imagery_Settings' ) ) {
                             3 => __( 'Bottom', 'kpf' ),
                         ],
                         'default' => 0,
+                        'inline'   => true,
                     ],
                     [
                         'id'      => 'kpf_img_crop_horz',
@@ -234,6 +238,7 @@ if( ! class_exists( 'KPF_Module_Imagery_Settings' ) ) {
                             3 => __( 'Right', 'kpf' ),
                         ],
                         'default' => 0,
+                        'inline'   => true,
                     ],
                 ],
             ];

@@ -7,6 +7,7 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
+    'KPF_CPTs' => $baseDir . '/work/classes/kpf-cpts.php',
     'KPF_Framework_Loader' => $baseDir . '/work/classes/kpf-framework-loader.php',
     'KPF_Module_Base' => $baseDir . '/work/modules/kpf-module-base.php',
     'KPF_Module_Content_Settings' => $baseDir . '/work/modules/content/kpf-settings.php',

@@ -51,34 +51,35 @@ if (! class_exists('\KP\WPFieldFramework\Sanitizer')) {
 
             // Type-specific sanitization.
             return match ($type) {
-                'text', 'hidden'            => $this->sanitizeText($value),
-                'textarea'                  => $this->sanitizeTextarea($value),
-                'email'                     => $this->sanitizeEmail($value),
-                'url'                       => $this->sanitizeUrl($value),
-                'number', 'range'           => $this->sanitizeNumber($value, $field),
-                'tel'                       => $this->sanitizeTel($value),
-                'password'                  => $this->sanitizePassword($value),
-                'date'                      => $this->sanitizeDate($value),
-                'datetime'                  => $this->sanitizeDatetime($value),
-                'time'                      => $this->sanitizeTime($value),
-                'week'                      => $this->sanitizeWeek($value),
-                'month'                     => $this->sanitizeMonth($value),
-                'link'                      => $this->sanitizeLink($value),
-                'select', 'radio'           => $this->sanitizeSelect($value, $field),
-                'multiselect', 'checkboxes' => $this->sanitizeMultiSelect($value, $field),
-                'checkbox', 'switch'        => $this->sanitizeCheckbox($value),
-                'wysiwyg'                   => $this->sanitizeWysiwyg($value),
-                'code'                      => $this->sanitizeCode($value),
-                'color'                     => $this->sanitizeColor($value),
-                'image', 'file'             => $this->sanitizeAttachment($value),
-                'gallery'                   => $this->sanitizeGallery($value),
-                'post_select', 'page_select'=> $this->sanitizePostSelect($value),
-                'term_select'               => $this->sanitizeTermSelect($value),
-                'user_select'               => $this->sanitizeUserSelect($value),
-                'repeater'                  => $this->sanitizeRepeater($value, $field),
-                'group', 'accordion'        => $this->sanitizeGroup($value, $field),
-                'heading', 'separator', 'html', 'message' => null,
-                default                     => $this->sanitizeText($value),
+                'text', 'hidden'                            => $this->sanitizeText($value),
+                'textarea'                                  => $this->sanitizeTextarea($value),
+                'email'                                     => $this->sanitizeEmail($value),
+                'url'                                       => $this->sanitizeUrl($value),
+                'number', 'range'                           => $this->sanitizeNumber($value, $field),
+                'tel'                                       => $this->sanitizeTel($value),
+                'password'                                  => $this->sanitizePassword($value),
+                'date'                                      => $this->sanitizeDate($value),
+                'datetime'                                  => $this->sanitizeDatetime($value),
+                'time'                                      => $this->sanitizeTime($value),
+                'week'                                      => $this->sanitizeWeek($value),
+                'month'                                     => $this->sanitizeMonth($value),
+                'link'                                      => $this->sanitizeLink($value),
+                'select', 'radio'                           => $this->sanitizeSelect($value, $field),
+                'multiselect', 'checkboxes'                 => $this->sanitizeMultiSelect($value, $field),
+                'checkbox', 'switch'                        => $this->sanitizeCheckbox($value),
+                'wysiwyg'                                   => $this->sanitizeWysiwyg($value),
+                'code'                                      => $this->sanitizeCode($value),
+                'color'                                     => $this->sanitizeColor($value),
+                'image', 'file'                             => $this->sanitizeAttachment($value),
+                'gallery'                                   => $this->sanitizeGallery($value),
+                'post_select', 'page_select'                => $this->sanitizePostSelect($value),
+                'term_select'                               => $this->sanitizeTermSelect($value),
+                'user_select'                               => $this->sanitizeUserSelect($value),
+                'repeater'                                  => $this->sanitizeRepeater($value, $field),
+                'group', 'accordion'                        => $this->sanitizeGroup($value, $field),
+                'heading', 'separator', 'html', 'message'   => null,
+                'clone'                                     => $this->sanitizeClone($value, $field),
+                default                                     => $this->sanitizeText($value),
             };
         }
 
@@ -92,7 +93,7 @@ if (! class_exists('\KP\WPFieldFramework\Sanitizer')) {
         public function sanitizeUnknown(mixed $value): mixed
         {
             if (is_array($value)) {
-                return array_map(array( $this, 'sanitizeUnknown' ), $value);
+                return array_map(array($this, 'sanitizeUnknown'), $value);
             }
 
             if (is_string($value)) {
@@ -632,32 +633,46 @@ if (! class_exists('\KP\WPFieldFramework\Sanitizer')) {
          */
         private function sanitizeRepeater(mixed $value, array $field): array
         {
-            if (! is_array($value)) {
-                return array();
+            if (!is_array($value)) {
+                return [];
             }
 
-            $sub_fields = $field['fields'] ?? array();
-            $sanitized = array();
+            $sub_fields = $field['fields'] ?? [];
+            $sanitized = [];
+
+            $field_lookup = [];
+            foreach ($sub_fields as $sf) {
+                $field_lookup[$sf['id']] = $sf;
+            }
+
             foreach ($value as $row_index => $row_data) {
-                if (! is_array($row_data)) {
+                if (!is_array($row_data)) {
                     continue;
                 }
 
-                $sanitized_row = array();
-                foreach ($sub_fields as $sub_field) {
-                    $sub_field_id = $sub_field['id'];
-                    if (isset($row_data[ $sub_field_id ])) {
-                        $sanitized_row[ $sub_field_id ] = $this->sanitize($row_data[ $sub_field_id ], $sub_field);
+                $sanitized_row = [];
+                foreach ($row_data as $key => $val) {
+                    if (isset($field_lookup[$key])) {
+                        $sub_field = $field_lookup[$key];
+                        $type = $sub_field['type'] ?? 'text';
+
+                        if (in_array($type, ['group', 'accordion'], true)) {
+                            $sanitized_row[$key] = $this->sanitizeGroup($val, $sub_field);
+                        } elseif ($type === 'repeater') {
+                            $sanitized_row[$key] = $this->sanitizeRepeater($val, $sub_field);
+                        } else {
+                            $sanitized_row[$key] = $this->sanitize($val, $sub_field);
+                        }
+                    } else {
+                        $sanitized_row[$key] = $this->sanitizeUnknown($val);
                     }
                 }
 
-                // Only add non-empty rows.
-                if (! empty($sanitized_row)) {
+                if (!empty($sanitized_row)) {
                     $sanitized[] = $sanitized_row;
                 }
             }
 
-            // Re-index array.
             return array_values($sanitized);
         }
 
@@ -671,29 +686,82 @@ if (! class_exists('\KP\WPFieldFramework\Sanitizer')) {
          */
         private function sanitizeGroup(mixed $value, array $field): array
         {
-            if (! is_array($value)) {
-                return array();
+            if (!is_array($value)) {
+                return [];
             }
 
-            $sub_fields = $field['fields'] ?? array();
-            $group_id = $field['id'] ?? '';
-            $sanitized = array();
+            $sub_fields = $field['fields'] ?? [];
+            $sanitized = [];
 
-            foreach ($sub_fields as $sub_field) {
-                $sub_field_id = $sub_field['id'];
+            // Build a lookup by field ID
+            $field_lookup = [];
+            foreach ($sub_fields as $sf) {
+                $field_lookup[$sf['id']] = $sf;
+            }
 
-                // Check for prefixed key (how it comes from the form)
-                $prefixed_id = $group_id . '_' . $sub_field_id;
+            foreach ($value as $key => $val) {
+                if (isset($field_lookup[$key])) {
+                    $sub_field = $field_lookup[$key];
+                    $type = $sub_field['type'] ?? 'text';
 
-                if (isset($value[$prefixed_id])) {
-                    $sanitized[$prefixed_id] = $this->sanitize($value[$prefixed_id], $sub_field);
-                } elseif (isset($value[$sub_field_id])) {
-                    // Fallback to non-prefixed key
-                    $sanitized[$sub_field_id] = $this->sanitize($value[$sub_field_id], $sub_field);
+                    if (in_array($type, ['group', 'accordion'], true)) {
+                        $sanitized[$key] = $this->sanitizeGroup($val, $sub_field);
+                    } elseif ($type === 'repeater') {
+                        $sanitized[$key] = $this->sanitizeRepeater($val, $sub_field);
+                    } else {
+                        $sanitized[$key] = $this->sanitize($val, $sub_field);
+                    }
+                } else {
+                    $sanitized[$key] = $this->sanitizeUnknown($val);
                 }
             }
 
             return $sanitized;
+        }
+
+        /**
+         * Sanitize clone field value.
+         *
+         * @since  1.0.0
+         * @param  mixed $value The value to sanitize.
+         * @param  array $field The field configuration.
+         * @return array        The sanitized clone data.
+         */
+        private function sanitizeClone(mixed $value, array $field): array
+        {
+            if (!is_array($value)) {
+                return [];
+            }
+
+            $sub_fields = $field['fields'] ?? [];
+            $sanitized = [];
+
+            $field_lookup = [];
+            foreach ($sub_fields as $sf) {
+                $field_lookup[$sf['id']] = $sf;
+            }
+
+            foreach ($value as $clone_index => $clone_data) {
+                if (!is_array($clone_data)) {
+                    continue;
+                }
+
+                $sanitized_clone = [];
+                foreach ($clone_data as $key => $val) {
+                    if (isset($field_lookup[$key])) {
+                        $sub_field = $field_lookup[$key];
+                        $sanitized_clone[$key] = $this->sanitize($val, $sub_field);
+                    } else {
+                        $sanitized_clone[$key] = $this->sanitizeUnknown($val);
+                    }
+                }
+
+                if (!empty($sanitized_clone)) {
+                    $sanitized[] = $sanitized_clone;
+                }
+            }
+
+            return array_values($sanitized);
         }
 
         /**
@@ -749,7 +817,7 @@ if (! class_exists('\KP\WPFieldFramework\Sanitizer')) {
                             $errors[] = sprintf(__('Value must be at least %s.', 'kp-wsf'), $field['min']);
                         }
                         if (isset($field['max']) && $value > $field['max']) {
-                                $errors[] = sprintf(__('Value must be no more than %s.', 'kp-wsf'), $field['max']);
+                            $errors[] = sprintf(__('Value must be no more than %s.', 'kp-wsf'), $field['max']);
                         }
                     }
 

@@ -47,6 +47,7 @@
             this.initConditionals();
             this.initExportImport();
             this.initAccordions();
+            this.initClones();
         },
 
         /**
@@ -69,6 +70,178 @@
             $(document).on('click', '.kp-wsf-accordion__header', function (e) {
                 e.preventDefault();
                 $(this).closest('.kp-wsf-accordion').toggleClass('kp-wsf-accordion--open');
+            });
+        },
+
+        /**
+ * Initialize clone field functionality.
+ *
+ * @since 1.0.0
+ * @return {void}
+ */
+        initClones: function () {
+            const self = this;
+
+            // Add clone button
+            $(document).on('click', '.kp-wsf-clone-add', function (e) {
+                e.preventDefault();
+                self.cloneAddItem($(this).closest('.kp-wsf-clone'));
+            });
+
+            // Remove clone button
+            $(document).on('click', '.kp-wsf-clone-remove', function (e) {
+                e.preventDefault();
+                if (confirm(kpWsfAdmin.i18n.confirmDelete || 'Are you sure you want to remove this item?')) {
+                    self.cloneRemoveItem($(this).closest('.kp-wsf-clone-item'));
+                }
+            });
+        },
+
+        /**
+         * Add a new clone item.
+         *
+         * @since 1.0.0
+         * @param {jQuery} $clone The clone container element.
+         * @return {void}
+         */
+        cloneAddItem: function ($clone) {
+            const $items = $clone.find('.kp-wsf-clone-items');
+            const $template = $clone.find('.kp-wsf-clone-template');
+            const maxClones = parseInt($clone.data('max-clones'), 10) || 0;
+            const currentCount = $items.find('.kp-wsf-clone-item:not(.kp-wsf-clone-item--template)').length;
+
+            // Check max clones limit
+            if (maxClones > 0 && currentCount >= maxClones) {
+                alert('Maximum number of items reached.');
+                return;
+            }
+
+            // Get template HTML and replace index placeholder
+            let template = $template.html();
+            const newIndex = this.cloneGetNextIndex($clone);
+
+            template = template.replace(/\{\{INDEX\}\}/g, newIndex);
+
+            // Create new item
+            const $newItem = $(template);
+            $newItem.removeClass('kp-wsf-clone-item--template');
+
+            // Append to items container
+            $items.append($newItem);
+
+            // Initialize any special fields in the new item
+            this.initRowFields($newItem);
+
+            // Trigger event
+            $(document).trigger('kp-wsf-clone-item-added', [$newItem, $clone]);
+        },
+
+        /**
+         * Remove a clone item.
+         *
+         * @since 1.0.0
+         * @param {jQuery} $item The item element to remove.
+         * @return {void}
+         */
+        cloneRemoveItem: function ($item) {
+            const $clone = $item.closest('.kp-wsf-clone');
+            const $items = $clone.find('.kp-wsf-clone-items');
+            const currentCount = $items.find('.kp-wsf-clone-item:not(.kp-wsf-clone-item--template)').length;
+
+            // Keep at least one item
+            if (currentCount <= 1) {
+                alert('At least one item is required.');
+                return;
+            }
+
+            // Trigger event before removal
+            $(document).trigger('kp-wsf-clone-item-before-remove', [$item, $clone]);
+
+            // Remove the item with animation
+            $item.slideUp(200, function () {
+                $(this).remove();
+
+                // Update indexes
+                KpWsfAdmin.cloneUpdateIndexes($clone);
+
+                // Trigger event after removal
+                $(document).trigger('kp-wsf-clone-item-removed', [$clone]);
+            });
+        },
+
+        /**
+         * Get the next available index for a clone.
+         *
+         * @since 1.0.0
+         * @param {jQuery} $clone The clone container element.
+         * @return {number} The next index.
+         */
+        cloneGetNextIndex: function ($clone) {
+            let maxIndex = -1;
+
+            $clone.find('.kp-wsf-clone-item:not(.kp-wsf-clone-item--template)').each(function () {
+                const index = parseInt($(this).data('clone-index'), 10) || 0;
+                if (index > maxIndex) {
+                    maxIndex = index;
+                }
+            });
+
+            return maxIndex + 1;
+        },
+
+        /**
+         * Update clone indexes after changes.
+         *
+         * @since 1.0.0
+         * @param {jQuery} $clone The clone container element.
+         * @return {void}
+         */
+        cloneUpdateIndexes: function ($clone) {
+            const fieldId = $clone.data('field-id');
+
+            $clone.find('.kp-wsf-clone-item:not(.kp-wsf-clone-item--template)').each(function (index) {
+                const $item = $(this);
+                const oldIndex = $item.data('clone-index');
+
+                // Update item index data attribute
+                $item.attr('data-clone-index', index);
+                $item.data('clone-index', index);
+
+                // Update field names and IDs within the item
+                $item.find('[name]').each(function () {
+                    const $field = $(this);
+                    let name = $field.attr('name');
+
+                    if (name) {
+                        const pattern = new RegExp('\\[' + oldIndex + '\\]', 'g');
+                        name = name.replace(pattern, '[' + index + ']');
+                        $field.attr('name', name);
+                    }
+                });
+
+                // Update field IDs
+                $item.find('[id]').each(function () {
+                    const $field = $(this);
+                    let id = $field.attr('id');
+
+                    if (id) {
+                        const pattern = new RegExp('_' + oldIndex + '_', 'g');
+                        id = id.replace(pattern, '_' + index + '_');
+                        $field.attr('id', id);
+                    }
+                });
+
+                // Update labels
+                $item.find('label[for]').each(function () {
+                    const $label = $(this);
+                    let forAttr = $label.attr('for');
+
+                    if (forAttr) {
+                        const pattern = new RegExp('_' + oldIndex + '_', 'g');
+                        forAttr = forAttr.replace(pattern, '_' + index + '_');
+                        $label.attr('for', forAttr);
+                    }
+                });
             });
         },
 

@@ -73,6 +73,7 @@ if( ! class_exists( 'KPF_Module_Permissions_Settings' ) ) {
                 'label'       => __( 'Group Roles', 'kpf' ),
                 'description' => __( 'Select which roles are allowed to manage each section. Admins and Super Admins are always allowed.', 'kpf' ),
                 'type'        => 'accordion',
+                'open'        => true,
                 'fields'      => [
                     [
                         'id'      => 'kpf_perms_role_security',

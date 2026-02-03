@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Module Base Class
  * 
@@ -13,10 +14,10 @@
  */
 
 // We don't want to allow direct access to this
-defined( 'ABSPATH' ) || die( 'No direct script access allowed' );
+defined('ABSPATH') || die('No direct script access allowed');
 
 // make sure we aren't loading in the class multiple times
-if( ! class_exists( 'KPF_Module_Base' ) ) {
+if (! class_exists('KPF_Module_Base')) {
 
     /**
      * Class KPF_Module_Base
@@ -29,7 +30,8 @@ if( ! class_exists( 'KPF_Module_Base' ) ) {
      * @access public
      * 
      */
-    class KPF_Module_Base {
+    class KPF_Module_Base
+    {
 
         /**
          * Static cache for expensive operations
@@ -48,14 +50,14 @@ if( ! class_exists( 'KPF_Module_Base' ) ) {
          * 
          * @return mixed The cached or freshly computed value
          */
-        protected function get_cached( string $key, callable $callback ): mixed {
+        protected function get_cached(string $key, callable $callback): mixed
+        {
 
-            if( ! isset( self::$cache[$key] ) ) {
-                self::$cache[$key] = $callback( );
+            if (! isset(self::$cache[$key])) {
+                self::$cache[$key] = $callback();
             }
 
             return self::$cache[$key];
-
         }
 
         /**
@@ -67,14 +69,14 @@ if( ! class_exists( 'KPF_Module_Base' ) ) {
          * 
          * @return void
          */
-        protected function clear_cache( ?string $key = null ): void {
+        protected function clear_cache(?string $key = null): void
+        {
 
-            if( $key !== null ) {
-                unset( self::$cache[$key] );
+            if ($key !== null) {
+                unset(self::$cache[$key]);
             } else {
                 self::$cache = [];
             }
-
         }
 
         /**
@@ -86,37 +88,37 @@ if( ! class_exists( 'KPF_Module_Base' ) ) {
          * 
          * @return bool True if user can access, false otherwise
          */
-        protected function user_can_access( string $permission_key ): bool {
+        protected function user_can_access(string $permission_key): bool
+        {
 
             // admins and super admins always have access
-            if( current_user_can( 'administrator' ) || is_super_admin( ) ) {
+            if (current_user_can('administrator') || is_super_admin()) {
                 return true;
             }
 
             // get the settings
-            $settings = get_option( 'kpf_settings', [] );
+            $settings = get_option('kpf_settings', []);
 
             // check user-level permissions first
             $user_key = 'kpf_perms_users_' . $permission_key;
-            if( isset( $settings[$user_key] ) && is_array( $settings[$user_key] ) ) {
-                if( in_array( get_current_user_id( ), $settings[$user_key], true ) ) {
+            if (isset($settings[$user_key]) && is_array($settings[$user_key])) {
+                if (in_array(get_current_user_id(), $settings[$user_key], true)) {
                     return true;
                 }
             }
 
             // check role-level permissions
             $role_key = 'kpf_perms_role_' . $permission_key;
-            if( isset( $settings[$role_key] ) && is_array( $settings[$role_key] ) ) {
-                $user = wp_get_current_user( );
-                foreach( $user->roles as $role ) {
-                    if( in_array( $role, $settings[$role_key], true ) ) {
+            if (isset($settings[$role_key]) && is_array($settings[$role_key])) {
+                $user = wp_get_current_user();
+                foreach ($user->roles as $role) {
+                    if (in_array($role, $settings[$role_key], true)) {
                         return true;
                     }
                 }
             }
 
             return false;
-
         }
 
         /**
@@ -126,18 +128,17 @@ if( ! class_exists( 'KPF_Module_Base' ) ) {
          * 
          * @return array Returns the user roles
          */
-        protected function get_all_roles( ): array {
+        protected function get_all_roles(): array
+        {
 
-            return $this->get_cached( 'roles', function( ) {
+            return $this->get_cached('roles', function () {
 
                 global $wp_roles;
-                $ret = $wp_roles->get_names( );
-                unset( $ret['administrator'] );
+                $ret = $wp_roles->get_names();
+                unset($ret['administrator']);
 
                 return $ret;
-
             });
-
         }
 
         /**
@@ -147,25 +148,29 @@ if( ! class_exists( 'KPF_Module_Base' ) ) {
          * 
          * @return array Returns array of user ID => display name
          */
-        protected function get_all_users( ): array {
+        protected function get_all_users(): array
+        {
 
-            return $this->get_cached( 'users', function( ) {
+            // return the cached list of users
+            return $this->get_cached('users', function () {
+
+                // get the current user ID
+                $user_id = get_current_user_id();
 
                 $ret = [];
-                $users = get_users( [
-                    'fields'  => [ 'ID', 'display_name' ],
+                $users = get_users([
+                    'fields'  => ['ID', 'display_name'],
+                    'exclude' => [$user_id],
                     'orderby' => 'display_name',
                     'order'   => 'ASC'
-                ] );
+                ]);
 
-                foreach( $users as $user ) {
+                foreach ($users as $user) {
                     $ret[$user->ID] = $user->display_name;
                 }
 
                 return $ret;
-
             });
-
         }
 
         /**
@@ -175,22 +180,21 @@ if( ! class_exists( 'KPF_Module_Base' ) ) {
          * 
          * @return array Returns the post types
          */
-        protected function get_all_post_types( ): array {
+        protected function get_all_post_types(): array
+        {
 
-            return $this->get_cached( 'post_types', function( ) {
+            return $this->get_cached('post_types', function () {
 
                 $ret = [];
-                $post_types = get_post_types( [], 'objects' );
+                $post_types = get_post_types([], 'objects');
 
-                foreach( $post_types as $pt ) {
-                    $labels = get_post_type_labels( $pt );
-                    $ret[esc_attr( $pt->name )] = esc_html__( $labels->name, 'kpf' );
+                foreach ($post_types as $pt) {
+                    $labels = get_post_type_labels($pt);
+                    $ret[esc_attr($pt->name)] = esc_html__($labels->name, 'kpf');
                 }
 
                 return $ret;
-
             });
-
         }
 
         /**
@@ -200,40 +204,39 @@ if( ! class_exists( 'KPF_Module_Base' ) ) {
          * 
          * @return string Returns a formatted string of all currently registered image sizes
          */
-        protected function get_current_image_sizes( ): string {
+        protected function get_current_image_sizes(): string
+        {
 
             global $_wp_additional_image_sizes;
 
             $ret = '';
             $sizes = [];
-            $get_image_sizes = get_intermediate_image_sizes( );
+            $get_image_sizes = get_intermediate_image_sizes();
 
-            foreach( $get_image_sizes as $s ) {
+            foreach ($get_image_sizes as $s) {
 
-                $sizes[$s] = [ 0, 0 ];
-                
-                if( in_array( $s, [ 'thumbnail', 'medium', 'medium_large', 'large' ], true ) ) {
-                    $sizes[$s][0] = get_option( $s . '_size_w' );
-                    $sizes[$s][1] = get_option( $s . '_size_h' );
+                $sizes[$s] = [0, 0];
+
+                if (in_array($s, ['thumbnail', 'medium', 'medium_large', 'large'], true)) {
+                    $sizes[$s][0] = get_option($s . '_size_w');
+                    $sizes[$s][1] = get_option($s . '_size_h');
                 } else {
-                    if( isset( $_wp_additional_image_sizes ) && isset( $_wp_additional_image_sizes[$s] ) ) {
+                    if (isset($_wp_additional_image_sizes) && isset($_wp_additional_image_sizes[$s])) {
                         $sizes[$s] = [
                             $_wp_additional_image_sizes[$s]['width'],
                             $_wp_additional_image_sizes[$s]['height'],
                         ];
                     }
                 }
-
             }
 
-            if( $sizes ) {
-                foreach( $sizes as $size => $atts ) {
-                    $ret .= '&nbsp;<strong>' . $size . ':</strong> (' . implode( 'x', $atts ) . ')<br />';
+            if ($sizes) {
+                foreach ($sizes as $size => $atts) {
+                    $ret .= '&nbsp;<strong>' . $size . ':</strong> (' . implode('x', $atts) . ')<br />';
                 }
             }
-            
-            return $ret;
 
+            return $ret;
         }
 
         /**
@@ -246,14 +249,12 @@ if( ! class_exists( 'KPF_Module_Base' ) ) {
          * 
          * @return mixed The setting value
          */
-        protected function get_setting( string $key, mixed $default = null ): mixed {
+        protected function get_setting(string $key, mixed $default = null): mixed
+        {
 
-            $settings = get_option( 'kpf_settings', [] );
+            $settings = get_option('kpf_settings', []);
 
             return $settings[$key] ?? $default;
-
         }
-
     }
-
 }

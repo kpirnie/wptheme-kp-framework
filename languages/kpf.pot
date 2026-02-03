@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-01-21T15:10:38+01:00\n"
+"POT-Creation-Date: 2026-02-03T17:03:27+01:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: kpf\n"
@@ -86,8 +86,8 @@ msgstr ""
 #: work/modules/content/kpf-settings.php:44
 #: work/modules/cookie-notice/kpf-settings.php:345
 #: work/modules/kpf-module-registry.php:151
-#: work/modules/permissions/kpf-settings.php:98
-#: work/modules/permissions/kpf-settings.php:168
+#: work/modules/permissions/kpf-settings.php:99
+#: work/modules/permissions/kpf-settings.php:169
 msgid "Content"
 msgstr ""
 
@@ -195,8 +195,8 @@ msgstr ""
 
 #: work/modules/cookie-notice/kpf-settings.php:44
 #: work/modules/kpf-module-registry.php:172
-#: work/modules/permissions/kpf-settings.php:116
-#: work/modules/permissions/kpf-settings.php:189
+#: work/modules/permissions/kpf-settings.php:117
+#: work/modules/permissions/kpf-settings.php:190
 msgid "Cookie Notice"
 msgstr ""
 
@@ -383,8 +383,8 @@ msgstr ""
 
 #: work/modules/framework/kpf-settings.php:44
 #: work/modules/kpf-module-registry.php:137
-#: work/modules/permissions/kpf-settings.php:86
-#: work/modules/permissions/kpf-settings.php:154
+#: work/modules/permissions/kpf-settings.php:87
+#: work/modules/permissions/kpf-settings.php:155
 msgid "Framework"
 msgstr ""
 
@@ -397,8 +397,8 @@ msgid "Picking a framework here will automatically load in everything needed for
 msgstr ""
 
 #: work/modules/framework/kpf-settings.php:96
-#: work/modules/imagery/kpf-settings.php:219
-#: work/modules/imagery/kpf-settings.php:231
+#: work/modules/imagery/kpf-settings.php:222
+#: work/modules/imagery/kpf-settings.php:235
 #: work/modules/smtp/kpf-settings.php:230
 msgid "None"
 msgstr ""
@@ -532,8 +532,8 @@ msgstr ""
 
 #: work/modules/imagery/kpf-settings.php:44
 #: work/modules/kpf-module-registry.php:144
-#: work/modules/permissions/kpf-settings.php:92
-#: work/modules/permissions/kpf-settings.php:161
+#: work/modules/permissions/kpf-settings.php:93
+#: work/modules/permissions/kpf-settings.php:162
 msgid "Imagery"
 msgstr ""
 
@@ -582,40 +582,40 @@ msgid "Image Width"
 msgstr ""
 
 #: work/modules/imagery/kpf-settings.php:206
-#: work/modules/imagery/kpf-settings.php:212
+#: work/modules/imagery/kpf-settings.php:213
 msgid "in pixels"
 msgstr ""
 
-#: work/modules/imagery/kpf-settings.php:211
+#: work/modules/imagery/kpf-settings.php:212
 msgid "Image Height"
 msgstr ""
 
-#: work/modules/imagery/kpf-settings.php:217
+#: work/modules/imagery/kpf-settings.php:220
 msgid "Crop Vertical"
 msgstr ""
 
-#: work/modules/imagery/kpf-settings.php:220
+#: work/modules/imagery/kpf-settings.php:223
 msgid "Top"
 msgstr ""
 
-#: work/modules/imagery/kpf-settings.php:221
-#: work/modules/imagery/kpf-settings.php:233
+#: work/modules/imagery/kpf-settings.php:224
+#: work/modules/imagery/kpf-settings.php:237
 msgid "Center"
 msgstr ""
 
-#: work/modules/imagery/kpf-settings.php:222
+#: work/modules/imagery/kpf-settings.php:225
 msgid "Bottom"
 msgstr ""
 
-#: work/modules/imagery/kpf-settings.php:229
+#: work/modules/imagery/kpf-settings.php:233
 msgid "Crop Horizontal"
 msgstr ""
 
-#: work/modules/imagery/kpf-settings.php:232
+#: work/modules/imagery/kpf-settings.php:236
 msgid "Left"
 msgstr ""
 
-#: work/modules/imagery/kpf-settings.php:234
+#: work/modules/imagery/kpf-settings.php:238
 msgid "Right"
 msgstr ""
 
@@ -625,22 +625,22 @@ msgid "Permissions"
 msgstr ""
 
 #: work/modules/kpf-module-registry.php:130
-#: work/modules/permissions/kpf-settings.php:80
-#: work/modules/permissions/kpf-settings.php:147
+#: work/modules/permissions/kpf-settings.php:81
+#: work/modules/permissions/kpf-settings.php:148
 #: work/modules/security/kpf-settings.php:44
 msgid "Security"
 msgstr ""
 
 #: work/modules/kpf-module-registry.php:158
 #: work/modules/performance/kpf-settings.php:44
-#: work/modules/permissions/kpf-settings.php:104
-#: work/modules/permissions/kpf-settings.php:175
+#: work/modules/permissions/kpf-settings.php:105
+#: work/modules/permissions/kpf-settings.php:176
 msgid "Performance"
 msgstr ""
 
 #: work/modules/kpf-module-registry.php:165
-#: work/modules/permissions/kpf-settings.php:110
-#: work/modules/permissions/kpf-settings.php:182
+#: work/modules/permissions/kpf-settings.php:111
+#: work/modules/permissions/kpf-settings.php:183
 #: work/modules/smtp/kpf-settings.php:44
 msgid "SMTP"
 msgstr ""
@@ -717,11 +717,11 @@ msgstr ""
 msgid "Select which roles are allowed to manage each section. Admins and Super Admins are always allowed."
 msgstr ""
 
-#: work/modules/permissions/kpf-settings.php:140
+#: work/modules/permissions/kpf-settings.php:141
 msgid "Group Users"
 msgstr ""
 
-#: work/modules/permissions/kpf-settings.php:141
+#: work/modules/permissions/kpf-settings.php:142
 msgid "Select which users are allowed to manage each section. You are automatically added by default."
 msgstr ""
 

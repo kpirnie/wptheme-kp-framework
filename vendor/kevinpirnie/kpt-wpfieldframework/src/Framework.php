@@ -120,6 +120,22 @@ if (! class_exists('\KP\WPFieldFramework\Framework')) {
          */
         private array $options_pages_by_slug = [];
         /**
+         * Whether REST API is enabled.
+         *
+         * @since 1.0.0
+         * @var bool
+         */
+        private bool $rest_enabled = false;
+
+        /**
+         * REST API namespace.
+         *
+         * @since 1.0.0
+         * @var string
+         */
+        private string $rest_namespace = 'kp-wpf/v1';
+
+        /**
          * Private constructor to enforce singleton.
          *
          * @since 1.0.0
@@ -209,29 +225,31 @@ if (! class_exists('\KP\WPFieldFramework\Framework')) {
         private function registerHooks(): void
         {
             // Enqueue admin assets.
-            add_action('admin_enqueue_scripts', array( $this, 'enqueueAdminAssets' ));
+            add_action('admin_enqueue_scripts', array($this, 'enqueueAdminAssets'));
             // Register meta boxes.
-            add_action('add_meta_boxes', array( $this, 'registerMetaBoxes' ));
+            add_action('add_meta_boxes', array($this, 'registerMetaBoxes'));
             // Save meta box data.
-            add_action('save_post', array( $this, 'saveMetaBoxes' ), 10, 2);
+            add_action('save_post', array($this, 'saveMetaBoxes'), 10, 2);
             // Save user meta.
-            add_action('personal_options_update', array( $this, 'saveUserMeta' ));
-            add_action('edit_user_profile_update', array( $this, 'saveUserMeta' ));
+            add_action('personal_options_update', array($this, 'saveUserMeta'));
+            add_action('edit_user_profile_update', array($this, 'saveUserMeta'));
             // Register options pages.
-            add_action('admin_menu', array( $this, 'registerOptionsPages' ));
+            add_action('admin_menu', array($this, 'registerOptionsPages'));
             // Register settings.
-            add_action('admin_init', array( $this, 'registerSettings' ));
+            add_action('admin_init', array($this, 'registerSettings'));
             // Initialize blocks.
-            add_action('init', array( $this, 'registerBlocks' ));
+            add_action('init', array($this, 'registerBlocks'));
             // Add user profile fields.
-            add_action('show_user_profile', array( $this, 'renderUserMetaFields' ));
-            add_action('edit_user_profile', array( $this, 'renderUserMetaFields' ));
+            add_action('show_user_profile', array($this, 'renderUserMetaFields'));
+            add_action('edit_user_profile', array($this, 'renderUserMetaFields'));
             // Nav menu item custom fields.
-            add_action('wp_nav_menu_item_custom_fields', array( $this, 'renderNavMenuFields' ), 10, 5);
-            add_action('wp_update_nav_menu_item', array( $this, 'saveNavMenuFields' ), 10, 3);
+            add_action('wp_nav_menu_item_custom_fields', array($this, 'renderNavMenuFields'), 10, 5);
+            add_action('wp_update_nav_menu_item', array($this, 'saveNavMenuFields'), 10, 3);
             // Handle export/import AJAX actions.
             add_action('wp_ajax_kp_wsf_export_settings', array($this, 'ajaxExportSettings'));
             add_action('wp_ajax_kp_wsf_import_settings', array($this, 'ajaxImportSettings'));
+            // Register REST API routes.
+            add_action('rest_api_init', array($this, 'registerRestRoutes'));
         }
 
         /**
@@ -283,7 +301,7 @@ if (! class_exists('\KP\WPFieldFramework\Framework')) {
         public function enqueueAdminAssets(string $hook_suffix): void
         {
             // Only load on relevant admin pages.
-            $dominated_screens = array( 'post.php', 'post-new.php', 'user-edit.php', 'profile.php', 'nav-menus.php' );
+            $dominated_screens = array('post.php', 'post-new.php', 'user-edit.php', 'profile.php', 'nav-menus.php');
             $is_options_page = $this->isFrameworkOptionsPage($hook_suffix);
             if (! in_array($hook_suffix, $dominated_screens, true) && ! $is_options_page) {
                 return;
@@ -302,10 +320,10 @@ if (! class_exists('\KP\WPFieldFramework\Framework')) {
             wp_enqueue_style('jquery-ui-datepicker-style', '//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css', array(), '1.13.2');
             // Enqueue jQuery Select2
             wp_enqueue_style('select2-css', 'https://cdn.jsdelivr.net/npm/select2@latest/dist/css/select2.min.css', array(), '4.1.0');
-            wp_enqueue_script('select2-js', 'https://cdn.jsdelivr.net/npm/select2@latest/dist/js/select2.min.js', array( 'jquery' ), '4.1.0', true);
+            wp_enqueue_script('select2-js', 'https://cdn.jsdelivr.net/npm/select2@latest/dist/js/select2.min.js', array('jquery'), '4.1.0', true);
             // Enqueue code editor if available (WP 4.9+).
             if (function_exists('wp_enqueue_code_editor')) {
-                wp_enqueue_code_editor(array( 'type' => 'text/html' ));
+                wp_enqueue_code_editor(array('type' => 'text/html'));
             }
 
             // Framework admin styles.
@@ -317,7 +335,7 @@ if (! class_exists('\KP\WPFieldFramework\Framework')) {
             // Framework admin script.
             $script_path = $this->assets_path . '/js/wsf-admin.js';
             if (file_exists($script_path)) {
-                wp_enqueue_script('kp-wsf-admin', $this->assets_url . '/js/wsf-admin.js', array( 'jquery', 'wp-color-picker', 'jquery-ui-datepicker', 'jquery-ui-sortable' ), self::VERSION, true);
+                wp_enqueue_script('kp-wsf-admin', $this->assets_url . '/js/wsf-admin.js', array('jquery', 'wp-color-picker', 'jquery-ui-datepicker', 'jquery-ui-sortable'), self::VERSION, true);
                 // Localize script with framework data.
                 wp_localize_script(
                     'kp-wsf-admin',
@@ -370,7 +388,7 @@ if (! class_exists('\KP\WPFieldFramework\Framework')) {
         public function addOptionsPage(array $config): OptionsPage
         {
             $page = new OptionsPage($config, $this->field_types, $this->storage);
-            $this->options_pages[ $page->getMenuSlug() ] = $page;
+            $this->options_pages[$page->getMenuSlug()] = $page;
             $this->options_pages_by_slug[$page->getMenuSlug()] = $page;
             return $page;
         }
@@ -385,7 +403,7 @@ if (! class_exists('\KP\WPFieldFramework\Framework')) {
         public function addMetaBox(array $config): MetaBox
         {
             $meta_box = new MetaBox($config, $this->field_types, $this->storage);
-            $this->meta_boxes[ $meta_box->getId() ] = $meta_box;
+            $this->meta_boxes[$meta_box->getId()] = $meta_box;
             // Register block if configured.
             if (! empty($config['create_block']) && $config['create_block'] === true) {
                 $this->block_generator->registerFromMetaBox($meta_box);
@@ -764,6 +782,297 @@ if (! class_exists('\KP\WPFieldFramework\Framework')) {
                     'errors'  => $result['errors'],
                 ]);
             }
+        }
+
+        /**
+         * Register REST API routes.
+         *
+         * @since  1.0.0
+         * @return void
+         */
+        public function registerRestRoutes(): void
+        {
+            if (!$this->rest_enabled) {
+                return;
+            }
+
+            // Options endpoints
+            register_rest_route($this->rest_namespace, '/options/(?P<key>[a-zA-Z0-9_-]+)', [
+                'methods'             => 'GET',
+                'callback'            => [$this, 'restGetOption'],
+                'permission_callback' => [$this, 'restPermissionCheck'],
+                'args'                => [
+                    'key' => [
+                        'required'          => true,
+                        'validate_callback' => function ($param) {
+                            return is_string($param);
+                        },
+                    ],
+                ],
+            ]);
+
+            register_rest_route($this->rest_namespace, '/options/(?P<key>[a-zA-Z0-9_-]+)', [
+                'methods'             => 'POST',
+                'callback'            => [$this, 'restUpdateOption'],
+                'permission_callback' => [$this, 'restPermissionCheck'],
+                'args'                => [
+                    'key'   => [
+                        'required' => true,
+                    ],
+                    'value' => [
+                        'required' => true,
+                    ],
+                ],
+            ]);
+
+            // Post meta endpoints
+            register_rest_route($this->rest_namespace, '/posts/(?P<id>\d+)/meta/(?P<key>[a-zA-Z0-9_-]+)', [
+                'methods'             => 'GET',
+                'callback'            => [$this, 'restGetPostMeta'],
+                'permission_callback' => [$this, 'restPermissionCheck'],
+                'args'                => [
+                    'id'  => [
+                        'required'          => true,
+                        'validate_callback' => function ($param) {
+                            return is_numeric($param);
+                        },
+                    ],
+                    'key' => [
+                        'required' => true,
+                    ],
+                ],
+            ]);
+
+            register_rest_route($this->rest_namespace, '/posts/(?P<id>\d+)/meta/(?P<key>[a-zA-Z0-9_-]+)', [
+                'methods'             => 'POST',
+                'callback'            => [$this, 'restUpdatePostMeta'],
+                'permission_callback' => [$this, 'restPermissionCheck'],
+                'args'                => [
+                    'id'    => [
+                        'required' => true,
+                    ],
+                    'key'   => [
+                        'required' => true,
+                    ],
+                    'value' => [
+                        'required' => true,
+                    ],
+                ],
+            ]);
+
+            // User meta endpoints
+            register_rest_route($this->rest_namespace, '/users/(?P<id>\d+)/meta/(?P<key>[a-zA-Z0-9_-]+)', [
+                'methods'             => 'GET',
+                'callback'            => [$this, 'restGetUserMeta'],
+                'permission_callback' => [$this, 'restPermissionCheck'],
+                'args'                => [
+                    'id'  => [
+                        'required' => true,
+                    ],
+                    'key' => [
+                        'required' => true,
+                    ],
+                ],
+            ]);
+        }
+
+        /**
+         * REST API permission check.
+         *
+         * @since  1.0.0
+         * @param  \WP_REST_Request $request The REST request.
+         * @return bool                      Whether permission is granted.
+         */
+        public function restPermissionCheck(\WP_REST_Request $request): bool
+        {
+            return current_user_can('manage_options');
+        }
+
+        /**
+         * Get option via REST API.
+         *
+         * @since  1.0.0
+         * @param  \WP_REST_Request $request The REST request.
+         * @return \WP_REST_Response|\WP_Error
+         */
+        public function restGetOption(\WP_REST_Request $request)
+        {
+            $key = $request->get_param('key');
+
+            // Check if option is registered
+            if (!in_array($key, $this->getRegisteredOptionKeys(), true)) {
+                return new \WP_Error('invalid_option', 'Option not registered with framework', ['status' => 404]);
+            }
+
+            $value = $this->storage->getOption($key, []);
+
+            return rest_ensure_response([
+                'key'   => $key,
+                'value' => $value,
+            ]);
+        }
+
+        /**
+         * Update option via REST API.
+         *
+         * @since  1.0.0
+         * @param  \WP_REST_Request $request The REST request.
+         * @return \WP_REST_Response|\WP_Error
+         */
+        public function restUpdateOption(\WP_REST_Request $request)
+        {
+            $key = $request->get_param('key');
+            $value = $request->get_param('value');
+
+            // Check if option is registered
+            if (!in_array($key, $this->getRegisteredOptionKeys(), true)) {
+                return new \WP_Error('invalid_option', 'Option not registered with framework', ['status' => 404]);
+            }
+
+            // Find the options page for sanitization
+            $options_page = $this->getOptionsPageByKey($key);
+            if ($options_page) {
+                $value = $options_page->sanitizeOptions($value);
+            }
+
+            $success = $this->storage->updateOption($key, $value);
+
+            if (!$success) {
+                return new \WP_Error('update_failed', 'Failed to update option', ['status' => 500]);
+            }
+
+            return rest_ensure_response([
+                'key'     => $key,
+                'value'   => $value,
+                'updated' => true,
+            ]);
+        }
+
+        /**
+         * Get post meta via REST API.
+         *
+         * @since  1.0.0
+         * @param  \WP_REST_Request $request The REST request.
+         * @return \WP_REST_Response|\WP_Error
+         */
+        public function restGetPostMeta(\WP_REST_Request $request)
+        {
+            $post_id = (int) $request->get_param('id');
+            $key = $request->get_param('key');
+
+            if (!get_post($post_id)) {
+                return new \WP_Error('invalid_post', 'Post not found', ['status' => 404]);
+            }
+
+            $value = $this->storage->getMeta($post_id, $key);
+
+            return rest_ensure_response([
+                'post_id' => $post_id,
+                'key'     => $key,
+                'value'   => $value,
+            ]);
+        }
+
+        /**
+         * Update post meta via REST API.
+         *
+         * @since  1.0.0
+         * @param  \WP_REST_Request $request The REST request.
+         * @return \WP_REST_Response|\WP_Error
+         */
+        public function restUpdatePostMeta(\WP_REST_Request $request)
+        {
+            $post_id = (int) $request->get_param('id');
+            $key = $request->get_param('key');
+            $value = $request->get_param('value');
+
+            if (!get_post($post_id)) {
+                return new \WP_Error('invalid_post', 'Post not found', ['status' => 404]);
+            }
+
+            // Find meta box for sanitization
+            foreach ($this->meta_boxes as $meta_box) {
+                $fields = $meta_box->getFields();
+                foreach ($fields as $field) {
+                    if ($field['id'] === $key) {
+                        $sanitizer = new Sanitizer();
+                        $value = $sanitizer->sanitize($value, $field);
+                        break 2;
+                    }
+                }
+            }
+
+            $success = $this->storage->updateMeta($post_id, $key, $value);
+
+            if (!$success) {
+                return new \WP_Error('update_failed', 'Failed to update meta', ['status' => 500]);
+            }
+
+            return rest_ensure_response([
+                'post_id' => $post_id,
+                'key'     => $key,
+                'value'   => $value,
+                'updated' => true,
+            ]);
+        }
+
+        /**
+         * Get user meta via REST API.
+         *
+         * @since  1.0.0
+         * @param  \WP_REST_Request $request The REST request.
+         * @return \WP_REST_Response|\WP_Error
+         */
+        public function restGetUserMeta(\WP_REST_Request $request)
+        {
+            $user_id = (int) $request->get_param('id');
+            $key = $request->get_param('key');
+
+            if (!get_user_by('ID', $user_id)) {
+                return new \WP_Error('invalid_user', 'User not found', ['status' => 404]);
+            }
+
+            $value = $this->storage->getUserMeta($user_id, $key);
+
+            return rest_ensure_response([
+                'user_id' => $user_id,
+                'key'     => $key,
+                'value'   => $value,
+            ]);
+        }
+
+        /**
+         * Get options page by option key.
+         *
+         * @since  1.0.0
+         * @param  string $option_key The option key.
+         * @return OptionsPage|null
+         */
+        private function getOptionsPageByKey(string $option_key): ?OptionsPage
+        {
+            foreach ($this->options_pages as $page) {
+                if ($page->getOptionKey() === $option_key) {
+                    return $page;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Enable REST API endpoints.
+         *
+         * @since  1.0.0
+         * @param  bool   $enable    Whether to enable REST API.
+         * @param  string $namespace Optional custom namespace.
+         * @return self
+         */
+        public function enableRestApi(bool $enable = true, string $namespace = ''): self
+        {
+            $this->rest_enabled = $enable;
+            if (!empty($namespace)) {
+                $this->rest_namespace = $namespace;
+            }
+            return $this;
         }
     }
 }

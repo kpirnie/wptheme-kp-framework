@@ -26,6 +26,7 @@ class ComposerStaticInit49a4d4575e55becb62c502463758a48c
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
+        'KPF_CPTs' => __DIR__ . '/../..' . '/work/classes/kpf-cpts.php',
         'KPF_Framework_Loader' => __DIR__ . '/../..' . '/work/classes/kpf-framework-loader.php',
         'KPF_Module_Base' => __DIR__ . '/../..' . '/work/modules/kpf-module-base.php',
         'KPF_Module_Content_Settings' => __DIR__ . '/../..' . '/work/modules/content/kpf-settings.php',
